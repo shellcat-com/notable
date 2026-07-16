@@ -120,7 +120,7 @@ final class CaptureEngine {
 /// Grabs exactly one frame from an `SCStream`, converts it to a `CGImage`, and tears the stream
 /// down. Used only on macOS 13 where `SCScreenshotManager` is unavailable. Untested on the current
 /// dev machine (macOS 26 always takes the `SCScreenshotManager` path).
-private final class SingleFrameStreamCapturer: NSObject, SCStreamOutput {
+private final class SingleFrameStreamCapturer: NSObject, SCStreamOutput, @unchecked Sendable {
     private var continuation: CheckedContinuation<CGImage, Error>?
     private var stream: SCStream?
     private let lock = NSLock()
