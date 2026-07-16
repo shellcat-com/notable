@@ -1,0 +1,43 @@
+name: Notable
+options:
+  bundleIdPrefix: io.notable
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: YES
+    DEAD_CODE_STRIPPING: YES
+    ALWAYS_SEARCH_USER_PATHS: NO
+    CLANG_ENABLE_OBJC_ARC: YES
+
+targets:
+  Notable:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: Sources/Notable
+        excludes:
+          - "Resources/Info.plist"
+          - "Resources/Notable.entitlements"
+    settings:
+      base:
+        PRODUCT_NAME: Notable
+        PRODUCT_BUNDLE_IDENTIFIER: io.notable.Notable
+        INFOPLIST_FILE: Sources/Notable/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/Notable/Resources/Notable.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        COMBINE_HIDPI_IMAGES: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../Frameworks"

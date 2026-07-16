@@ -1,0 +1,31 @@
+## macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+## Xcode
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+## XcodeGen — the project is generated from project.yml.
+## Regenerate locally with `xcodegen generate`.
+Notable.xcodeproj/
+
+## Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+## Misc
+*.log
