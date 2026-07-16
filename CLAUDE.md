@@ -42,17 +42,28 @@ as a class name (use **Annotation**), *crop box* (use **Selection**), *drawing/m
 
 ## Current phase
 
-**Phase 1 — the core loop: Capture → Annotate → Copy/Save.** Acceptance: press the hotkey,
-drag-select or window-snap a region, draw at least an Arrow and a blur Censor, click back into
-either to move/resize it, undo/redo cleanly, and get the result onto the clipboard or saved as a
-file — no crash, no stuck Overlay, no unexplained permissions dead-end.
+**Phase 2 — annotation depth + Beautify: IMPLEMENTED, pending hands-on verification.**
+Phase 1 (capture → annotate → copy/save loop) is complete. Phase 2 adds: Arrow ×5 styles,
+Censor ×3 modes (blur/pixelate/solid), Number/Stamp/Highlighter/Measure/Spotlight Tools,
+restyle-existing (selection-aware toolbar, coalesced undo), Loupe + Eyedropper utility Tools,
+Beautify (30 gradients, padding, radius, shadow, window chrome), and on-device Core Image
+Adjustments (7 params + presets).
 
-**Explicitly OUT of scope for Phase 1** (resist scope creep): scroll capture, recording,
-beautify/gradients, OCR, upload/sync, cross-device handoff, full 19-tool parity, Preferences
-beyond the bare minimum for permissions.
+**Phase 2 render pipeline (the load-bearing design — do not regress):**
+raw Capture → adjusted base (CI chain; neutral short-circuits to raw) → censor blur/pixelate
+derive FROM the adjusted base → AnnotatedCanvas (spotlight dim backdrop first, then vectors,
+then censors; Capture-point coords) → BeautifyCanvas wrapper (pass-through when disabled) →
+ImageRenderer at capture.scale. One composition drives display AND export ("on screen === saved").
 
-Phase 1 build order (as directed): scaffold → Capture pipeline (overlay + ScreenCaptureKit) FIRST,
-get real pixels on screen, THEN build the annotation Editor around them.
+**Coordinate rule (everywhere):** `capturePoint = viewPoint/scale − innerOrigin`, where
+`innerOrigin = effectiveSettings.innerOrigin = (padding, padding + chromeHeight)`. Overlays
+(selection box/handles/text editor) use the inverse `+ innerOrigin·scale` on their `.position()`.
+
+**Undo scope:** the ⌘Z stack covers annotation content ONLY (create/delete/move/resize/restyle).
+Adjustments and Beautify are document-level settings, out of the stack, with panel Resets.
+
+**Still OUT of scope (Phase 3+):** scroll capture, recording, OCR, upload/sync, cross-device
+handoff, capture templates.
 
 ---
 
