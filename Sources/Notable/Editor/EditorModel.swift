@@ -3,41 +3,108 @@ import CoreImage
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Backing state for one Editor window: the Capture, its Layer of Annotations, the active Tool and
-/// style, undo/redo, and annotation-aware Copy/Save.
+/// Backing state for one Editor window: the Capture, its Layer of Annotations, the active Tool,
+/// style + restyle transactions, Adjustments (Core Image), Beautify settings, undo/redo, and
+/// annotation-aware Copy/Save.
+///
+/// Undo scope: the ⌘Z stack covers ANNOTATION CONTENT ONLY (create/delete/move/resize/restyle).
+/// Adjustments and Beautify are document-level, directly-reversible settings with panel Resets.
 @MainActor
 final class EditorModel: ObservableObject {
 
     let capture: Capture
 
+    // MARK: Annotation state
+
     @Published var annotations: [Annotation] = []
-    @Published var selectedID: UUID?
+    @Published var selectedID: UUID? {
+        didSet { if oldValue != selectedID { commitRestyle() } }
+    }
     @Published var editingTextID: UUID?
+
+    // MARK: Tool state (creation defaults — not undoable, like a palette)
 
     @Published var activeTool: Tool = .arrow
     @Published var toolColor: RGBAColor = .red
     @Published var lineWidth: CGFloat = 4
+    @Published var toolArrowStyle: ArrowStyle = .standard
+    @Published var toolCensorMode: CensorMode = .blur
+    @Published var currentEmoji: String = "⭐️"
+    @Published var spotlightShape: SpotlightShape = .rectangle
+    @Published var measureShowsSize: Bool = false
+
+    static let stampChoices: [String] = [
+        "⭐️", "✅", "❌", "❗️", "❓", "🔥", "👍", "👎",
+        "⚠️", "💡", "👀", "🎯", "➡️", "🚫", "💯", "📌",
+    ]
+
+    // MARK: Adjustments (Core Image, on-device)
+
+    @Published var adjustments: Adjustments = .neutral {
+        didSet { if oldValue != adjustments { scheduleRender() } }
+    }
+
+    /// The (possibly adjusted) Capture pixels driving display, loupe crops, and the sampler.
+    @Published private(set) var adjustedImage: CGImage
+    @Published private(set) var baseImage: NSImage
+    @Published private(set) var blurredImage: CGImage
+    @Published private(set) var pixelatedImage: CGImage
+
+    private let adjuster: CaptureAdjuster
+    private var censorSourcesReady = false
+    /// The Adjustments the published images currently reflect (display can lag `adjustments`
+    /// by the render debounce; export syncs the two).
+    private var displayedAdjustments: Adjustments = .neutral
+    private let renderQueue = DispatchQueue(label: "io.notable.adjustments", qos: .userInitiated)
+    private var renderWorkItem: DispatchWorkItem?
+
+    // MARK: Beautify
+
+    @Published var beautify = BeautifySettings()
+    @Published var beautifyEnabled = false
+
+    var effectiveSettings: BeautifySettings { beautifyEnabled ? beautify : .disabled }
+
+    // MARK: Utilities (Loupe / Eyedropper) — never touch annotations or undo
+
+    private var _pixelSampler: CapturePixelSampler?
+    var pixelSampler: CapturePixelSampler? {
+        if let sampler = _pixelSampler { return sampler }
+        _pixelSampler = CapturePixelSampler(cgImage: adjustedImage)
+        return _pixelSampler
+    }
+    private var toolBeforeUtility: Tool?
+
+    // MARK: Undo / restyle internals
 
     private let textFontSize: CGFloat = 18
-
     private var undoStack: [[Annotation]] = []
     private var redoStack: [[Annotation]] = []
 
+    private enum RestyleAxis { case color, lineWidth }
+    private var restyle: (axis: RestyleAxis, before: [Annotation])?
+
+    // MARK: Init
+
     init(capture: Capture) {
         self.capture = capture
+        adjuster = CaptureAdjuster(capture: capture)
+        adjustedImage = capture.image
+        baseImage = NSImage(cgImage: capture.image, size: capture.pointSize)
+        // Placeholders until a Censor first needs them (ensureCensorSourcesReady).
+        blurredImage = capture.image
+        pixelatedImage = capture.image
     }
 
     // MARK: Derived
 
     var pointSize: CGSize { capture.pointSize }
 
-    lazy var baseImage: NSImage = NSImage(cgImage: capture.image, size: capture.pointSize)
-
-    /// A gaussian-blurred copy of the whole Capture, sampled inside Censor rects. Built once.
-    lazy var blurredImage: CGImage = makeBlurredImage()
-
     var currentStyle: AnnotationStyle {
-        AnnotationStyle(color: toolColor, lineWidth: lineWidth, fontSize: textFontSize)
+        AnnotationStyle(
+            color: toolColor, lineWidth: lineWidth, fontSize: textFontSize,
+            arrowStyle: toolArrowStyle, censorMode: toolCensorMode
+        )
     }
 
     var selectedAnnotation: Annotation? {
@@ -49,17 +116,38 @@ final class EditorModel: ObservableObject {
         annotations.first { $0.id == id }
     }
 
-    // MARK: Tool
+    /// Auto-increment source for the Number tool. Computed from the Layer, so it is correct
+    /// after any undo/redo without side state.
+    var nextBadgeNumber: Int {
+        var maxValue = 0
+        for annotation in annotations {
+            if case let .number(_, _, value) = annotation.kind { maxValue = max(maxValue, value) }
+        }
+        return maxValue + 1
+    }
+
+    // MARK: Tool selection
 
     func selectTool(_ tool: Tool) {
         endEditingText()
+        commitRestyle()
+        if tool.isUtility, !activeTool.isUtility { toolBeforeUtility = activeTool }
+        if !tool.isUtility { toolBeforeUtility = nil }
         activeTool = tool
+        if tool == .censor { ensureCensorSourcesReady() }
         if tool.isDrawing { selectedID = nil }
+    }
+
+    func exitUtilityTool() {
+        guard activeTool.isUtility else { return }
+        activeTool = toolBeforeUtility ?? .select
+        toolBeforeUtility = nil
     }
 
     // MARK: Editing operations (each is one undo step)
 
     func add(_ annotation: Annotation) {
+        if case .censor = annotation.kind { ensureCensorSourcesReady() }
         pushUndo()
         annotations.append(annotation)
         selectedID = annotation.id
@@ -69,6 +157,7 @@ final class EditorModel: ObservableObject {
         guard let id = selectedID, annotations.contains(where: { $0.id == id }) else { return }
         pushUndo()
         annotations.removeAll { $0.id == id }
+        renumberBadges() // keeps Number badges 1…n; same undo step as the delete
         selectedID = nil
         editingTextID = nil
     }
@@ -87,7 +176,105 @@ final class EditorModel: ObservableObject {
         trimUndo()
     }
 
+    private func renumberBadges() {
+        var next = 1
+        for index in annotations.indices {
+            if case let .number(center, radius, _) = annotations[index].kind {
+                annotations[index].kind = .number(center: center, radius: radius, value: next)
+                next += 1
+            }
+        }
+    }
+
+    // MARK: Restyle (selection-aware style edits; one undo step per gesture/pick)
+
+    /// Finalize any open continuous restyle as ONE undo step. Called at every interaction
+    /// boundary (selection change, tool change, undo/redo, before move/resize snapshots).
+    func flushStyleTransaction() { commitRestyle() }
+
+    func setColor(_ color: RGBAColor) {
+        guard selectedAnnotation != nil else { toolColor = color; return }
+        beginOrContinueRestyle(.color)
+        mutateSelectedStyle { $0.color = color }
+    }
+
+    /// Called continuously during the slider drag; `endLineWidthEdit` commits the undo step.
+    func setLineWidth(_ width: CGFloat) {
+        guard selectedAnnotation != nil else { lineWidth = width; return }
+        beginOrContinueRestyle(.lineWidth)
+        mutateSelectedStyle { $0.lineWidth = width }
+    }
+
+    func endLineWidthEdit() { commitRestyle() }
+
+    func setArrowStyle(_ style: ArrowStyle) {
+        guard let selected = selectedAnnotation, case .arrow = selected.kind else {
+            toolArrowStyle = style
+            return
+        }
+        guard selected.style.arrowStyle != style else { return } // re-pick = no-op, no undo step
+        pushUndo() // discrete pick = one undo step (pushUndo flushes any open transaction first)
+        mutateSelectedStyle { $0.arrowStyle = style }
+    }
+
+    func setCensorMode(_ mode: CensorMode) {
+        ensureCensorSourcesReady()
+        guard let selected = selectedAnnotation, case .censor = selected.kind else {
+            toolCensorMode = mode
+            return
+        }
+        guard selected.style.censorMode != mode else { return } // re-pick = no-op, no undo step
+        pushUndo()
+        mutateSelectedStyle { $0.censorMode = mode }
+    }
+
+    // Toolbar read-backs: reflect the selected Annotation when present, else the tool defaults.
+    var displayColor: RGBAColor { selectedAnnotation?.style.color ?? toolColor }
+    var displayLineWidth: CGFloat { selectedAnnotation?.style.lineWidth ?? lineWidth }
+    var displayArrowStyle: ArrowStyle {
+        if let selected = selectedAnnotation, case .arrow = selected.kind { return selected.style.arrowStyle }
+        return toolArrowStyle
+    }
+    var displayCensorMode: CensorMode {
+        if let selected = selectedAnnotation, case .censor = selected.kind { return selected.style.censorMode }
+        return toolCensorMode
+    }
+
+    private func beginOrContinueRestyle(_ axis: RestyleAxis) {
+        if let open = restyle, open.axis != axis { commitRestyle() }
+        if restyle == nil { restyle = (axis, annotations) } // snapshot BEFORE first mutation
+    }
+
+    private func mutateSelectedStyle(_ mutate: (inout AnnotationStyle) -> Void) {
+        guard let id = selectedID, let index = annotations.firstIndex(where: { $0.id == id }) else { return }
+        mutate(&annotations[index].style)
+    }
+
+    private func commitRestyle() {
+        guard let pending = restyle else { return }
+        restyle = nil
+        guard annotations != pending.before else { return }
+        undoStack.append(pending.before)
+        redoStack.removeAll()
+        trimUndo()
+    }
+
     // MARK: Text editing
+
+    /// Restores both history stacks if a brand-new text is discarded empty, making
+    /// create-then-discard a true no-op (no dangling undo entry, no lost redo).
+    private var newTextRestore: (id: UUID, undo: [[Annotation]], redo: [[Annotation]])?
+
+    /// Creates a new text Annotation and enters editing. Snapshots the history stacks first so
+    /// an empty-discard can roll them back exactly, regardless of restyles in between.
+    func addNewText(_ annotation: Annotation) {
+        commitRestyle()
+        newTextRestore = (annotation.id, undoStack, redoStack)
+        pushUndo()
+        annotations.append(annotation)
+        selectedID = annotation.id
+        editingTextID = annotation.id
+    }
 
     func beginEditingText(_ id: UUID, isNew: Bool) {
         if !isNew { pushUndo() }
@@ -98,12 +285,20 @@ final class EditorModel: ObservableObject {
     func endEditingText() {
         guard let id = editingTextID else { return }
         editingTextID = nil
-        // Drop an Annotation left empty, and undo the creation entry so it isn't a dangling step.
+        defer { newTextRestore = nil }
+        // Drop an Annotation left empty and roll the history stacks back so the aborted
+        // creation leaves no trace (including any restyle steps on the doomed text).
         if let index = annotations.firstIndex(where: { $0.id == id }),
            case let .text(_, string) = annotations[index].kind,
            string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            restyle = nil // an open transaction on the doomed text must not commit
             annotations.remove(at: index)
-            if !undoStack.isEmpty { undoStack.removeLast() }
+            if let restore = newTextRestore, restore.id == id {
+                undoStack = restore.undo
+                redoStack = restore.redo
+            }
+            // Re-edit path: KEEP the beginEditingText entry — it holds the pre-edit text, so
+            // emptying an existing Text acts as an undoable delete.
             if selectedID == id { selectedID = nil }
         }
     }
@@ -130,6 +325,7 @@ final class EditorModel: ObservableObject {
     var canRedo: Bool { !redoStack.isEmpty }
 
     func undo() {
+        commitRestyle() // an open recolor drag becomes the step this undo reverts
         guard let previous = undoStack.popLast() else { return }
         redoStack.append(annotations)
         annotations = previous
@@ -137,6 +333,7 @@ final class EditorModel: ObservableObject {
     }
 
     func redo() {
+        commitRestyle()
         guard let next = redoStack.popLast() else { return }
         undoStack.append(annotations)
         annotations = next
@@ -144,6 +341,7 @@ final class EditorModel: ObservableObject {
     }
 
     private func pushUndo() {
+        commitRestyle()
         undoStack.append(annotations)
         redoStack.removeAll()
         trimUndo()
@@ -158,6 +356,70 @@ final class EditorModel: ObservableObject {
         editingTextID = nil
     }
 
+    // MARK: Adjustments plumbing
+
+    func updateAdjustment(_ keyPath: WritableKeyPath<Adjustments, Double>, _ value: Double) {
+        adjustments[keyPath: keyPath] = value
+    }
+
+    func applyPreset(_ preset: AdjustmentPreset) {
+        adjustments = preset.adjustments
+    }
+
+    func resetAdjustments() {
+        adjustments = .neutral
+    }
+
+    /// First Censor use builds blur + pixelate SYNCHRONOUSLY so a Censor never flashes raw
+    /// sensitive pixels. Later adjustment-driven rebuilds are async (blurred→blurred, never raw).
+    func ensureCensorSourcesReady() {
+        guard !censorSourcesReady else { return }
+        censorSourcesReady = true
+        blurredImage = adjuster.makeBlurred(adjustments)
+        pixelatedImage = adjuster.makePixelated(adjustments)
+    }
+
+    /// Debounced background re-render of the adjusted base (and censor sources if in use).
+    private func scheduleRender() {
+        renderWorkItem?.cancel()
+        let adj = adjustments
+        let size = pointSize
+        let needsCensorSources = censorSourcesReady
+        let adjuster = self.adjuster
+        let work = DispatchWorkItem { [weak self] in
+            let adjusted = adjuster.makeAdjusted(adj)
+            let blurred = needsCensorSources ? adjuster.makeBlurred(adj) : nil
+            let pixelated = needsCensorSources ? adjuster.makePixelated(adj) : nil
+            DispatchQueue.main.async {
+                guard let self, self.adjustments == adj else { return } // superseded mid-drag
+                self.adjustedImage = adjusted
+                self.baseImage = NSImage(cgImage: adjusted, size: size)
+                self._pixelSampler = nil // sampler/loupe re-read the adjusted pixels lazily
+                if let blurred { self.blurredImage = blurred }
+                if let pixelated { self.pixelatedImage = pixelated }
+                self.displayedAdjustments = adj
+            }
+        }
+        renderWorkItem = work
+        renderQueue.asyncAfter(deadline: .now() + 0.12, execute: work)
+    }
+
+    // MARK: Utility sampling (Loupe / Eyedropper)
+
+    func sampleColor(atCapturePoint point: CGPoint) -> RGBAColor? {
+        guard let sampler = pixelSampler else { return nil }
+        let x = min(max(Int((point.x * capture.scale).rounded(.down)), 0), sampler.width - 1)
+        let y = min(max(Int((point.y * capture.scale).rounded(.down)), 0), sampler.height - 1)
+        return sampler.rgba(x: x, y: y)
+    }
+
+    /// Eyedropper click: set the tool color (non-undo state) and hop back to the prior Tool.
+    func pickColor(atCapturePoint point: CGPoint) {
+        guard let color = sampleColor(atCapturePoint: point) else { return }
+        toolColor = color
+        exitUtilityTool()
+    }
+
     // MARK: Output
 
     func copyToClipboard() {
@@ -168,8 +430,7 @@ final class EditorModel: ObservableObject {
     }
 
     func save() {
-        // Commit any in-progress text before rendering.
-        endEditingText()
+        endEditingText() // commit any in-progress text before rendering
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.png]
         panel.canCreateDirectories = true
@@ -183,13 +444,51 @@ final class EditorModel: ObservableObject {
         }
     }
 
-    /// The flattened Capture + Annotations. `ImageRenderer` rasterizes the shared `AnnotatedCanvas`
-    /// at the Capture's native scale, so output is full-resolution and matches what's on screen.
-    private func exportCanvas() -> AnnotatedCanvas {
-        AnnotatedCanvas(
-            base: baseImage,
-            blurred: blurredImage,
-            pointSize: pointSize,
+    /// Synchronously renders the adjusted base + whichever censor sources are actually in use
+    /// for the CURRENT adjustments, so export matches the settled adjustment values — never a
+    /// mid-debounce frame. If the display is still lagging (debounce pending), it is synced to
+    /// the same images here, so "on screen === saved" holds at the moment of export too.
+    private func exportImages() -> (base: NSImage, blurred: CGImage, pixelated: CGImage) {
+        let displayIsStale = displayedAdjustments != adjustments
+        if displayIsStale { renderWorkItem?.cancel() } // we're doing its work synchronously now
+
+        let adjusted = displayIsStale ? adjuster.makeAdjusted(adjustments) : adjustedImage
+        // Censor sources: reuse the published ones when fresh; recompute when stale.
+        let blurred: CGImage
+        let pixelated: CGImage
+        if censorSourcesReady {
+            blurred = displayIsStale ? adjuster.makeBlurred(adjustments) : blurredImage
+            pixelated = displayIsStale ? adjuster.makePixelated(adjustments) : pixelatedImage
+        } else {
+            // No Censor has ever been drawn; sources are never sampled. Cheap stand-in.
+            blurred = adjusted
+            pixelated = adjusted
+        }
+
+        if displayIsStale {
+            adjustedImage = adjusted
+            baseImage = NSImage(cgImage: adjusted, size: pointSize)
+            _pixelSampler = nil
+            if censorSourcesReady {
+                blurredImage = blurred
+                pixelatedImage = pixelated
+            }
+            displayedAdjustments = adjustments
+        }
+        return (baseImage, blurred, pixelated)
+    }
+
+    /// The flattened composition: Beautify frame (pass-through when disabled) around the
+    /// Capture + Annotations. `ImageRenderer` rasterizes at the Capture's native scale.
+    private func exportCanvas() -> BeautifyCanvas {
+        let images = exportImages()
+        return BeautifyCanvas(
+            base: images.base,
+            blurred: images.blurred,
+            pixelated: images.pixelated,
+            capturePointSize: pointSize,
+            captureScale: capture.scale,
+            settings: effectiveSettings,
             scale: 1,
             annotations: annotations,
             draft: nil
@@ -214,7 +513,7 @@ final class EditorModel: ObservableObject {
             return
         }
         let rep = NSBitmapImageRep(cgImage: cgImage)
-        rep.size = pointSize
+        rep.size = effectiveSettings.outerSize(for: pointSize)
         guard let data = rep.representation(using: .png, properties: [:]) else {
             NSLog("Notable: failed to encode PNG")
             return
@@ -224,18 +523,6 @@ final class EditorModel: ObservableObject {
         } catch {
             NSLog("Notable: failed to write PNG — \(error)")
         }
-    }
-
-    private func makeBlurredImage() -> CGImage {
-        let source = CIImage(cgImage: capture.image)
-        let extent = source.extent
-        let sigma = max(8, Double(min(extent.width, extent.height)) / 90)
-        let blurred = source
-            .clampedToExtent()
-            .applyingGaussianBlur(sigma: sigma)
-            .cropped(to: extent)
-        let context = CIContext()
-        return context.createCGImage(blurred, from: extent) ?? capture.image
     }
 
     // MARK: Save location memory
