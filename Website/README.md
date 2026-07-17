@@ -1,9 +1,28 @@
-# Notable Website
+# Parcel marketing site (Astro + Tailwind + React islands)
 
-Static marketing/download site for the current local Notable build.
+Parable-inspired motion and layout; deploy as static output.
 
-Open `index.html` directly in a browser, or serve this folder with any static host. The download
-button points to `downloads/Notable.zip`, which is generated from the current Debug app build.
+## Develop
 
-Before public distribution, replace the codename, add a final icon, sign and notarize the app, and
-regenerate the zip from a release build.
+```bash
+cd Website
+npm install
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+npm run preview
+```
+
+Output lands in `Website/dist/`. Point Vercel or GitHub Pages at that directory.
+
+## Downloads
+
+Place a notarized `Parcel.zip` at `public/downloads/Parcel.zip` before deploying, or run `Scripts/release.sh` which copies the artifact automatically.
+
+Sparkle appcast: `public/appcast.xml` — update `sparkle:edSignature` and `length` after each release.
+
+The previous vanilla HTML draft lives in `legacy/`.

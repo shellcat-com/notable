@@ -21,7 +21,7 @@ xcuserdata/
 
 ## XcodeGen — the project is generated from project.yml.
 ## Regenerate locally with `xcodegen generate`.
-Notable.xcodeproj/
+Parcel.xcodeproj/
 
 ## Swift Package Manager
 .build/

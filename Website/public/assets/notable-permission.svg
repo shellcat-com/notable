@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <rect width="640" height="360" rx="16" fill="#1c1c1e"/>
+  <text x="32" y="48" fill="#f5f5f7" font-family="system-ui,sans-serif" font-size="22" font-weight="600">Screen &amp; System Audio Recording</text>
+  <rect x="32" y="72" width="576" height="56" rx="10" fill="#2c2c2e"/>
+  <circle cx="56" cy="100" r="8" fill="#30d158"/>
+  <text x="76" y="106" fill="#f5f5f7" font-family="system-ui,sans-serif" font-size="16">Parcel</text>
+  <text x="520" y="106" fill="#98989d" font-family="system-ui,sans-serif" font-size="14">On</text>
+  <text x="32" y="170" fill="#98989d" font-family="system-ui,sans-serif" font-size="14">Allow Parcel to record the contents of your display and audio.</text>
+</svg>

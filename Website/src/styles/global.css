@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+  body {
+    @apply bg-ink text-white antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-full bg-gradient-to-r from-violet to-fuchsia px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet/25 transition hover:brightness-110;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-full border border-line bg-panel/80 px-6 py-3 text-sm font-semibold text-white/90 backdrop-blur transition hover:border-white/30 hover:bg-panel;
+  }
+  .section-kicker {
+    @apply font-mono text-xs uppercase tracking-[0.2em] text-mint;
+  }
+  .glass-nav {
+    @apply fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-ink/70 backdrop-blur-xl;
+  }
+  .bento-card {
+    @apply relative overflow-hidden rounded-2xl border border-line bg-panel/70 p-6 transition hover:border-violet/40;
+  }
+}

@@ -1,68 +1,28 @@
-# Notable
+# Parcel
 
-A native macOS Capture and annotation tool, built from scratch in SwiftUI. Capture a region or a
-window, mark it up, and get it onto your clipboard or saved as a file — fast, on-device, no cloud.
+A native macOS Capture and annotation tool from [Parable](https://parable.dev), built in SwiftUI. Capture a region or window, mark it up, and copy or save — fast, on-device, no cloud AI.
 
-> **Working codename.** "Notable" is a placeholder; a final original name + icon is pending.
+**Tagline:** Capture, mark up, and ship.
 
 ## Status
 
-**Phase 1 — core loop: verified (Debug build).** Hotkey capture → frozen Overlay → region /
-window-snap Selection → Editor → copy / save. Builds cleanly on macOS 26; Screen Recording
-permission required for live Capture.
+**v1.0 — Phases 1–4 complete.** Hotkey capture → frozen Overlay → Selection → Editor → copy/save. Full annotation toolkit, Beautify, Adjustments, scroll capture, recording, local history, Vision OCR/QR/face, PII/face censoring, optional Supabase upload, configurable hotkey, Sparkle auto-update, sandboxed Release builds.
 
-**Phase 2 — annotation depth + Beautify: verified (code + build).** Arrow ×5 styles, Censor ×3
-modes, Number, Stamp, Highlighter, Measure, Spotlight, Loupe, Eyedropper, selection-aware
-restyling, Beautify (30 gradients), and on-device Core Image Adjustments. Editor ⌘C/⌘S/⌘Z work
-from canvas focus via a local key monitor.
+See [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md) for the manual verification matrix.
 
-**Phase 3 and local Phase 4: verified (code + build).** Manual Vision-assisted scroll stitching,
-MP4 display recording with trim and GIF export, local editable history (including output format),
-Vision OCR/QR/face detection, local PII/face Censoring, PNG/JPEG/HEIC/TIFF output, and saved
-Beautify brand kits.
+**No network AI, ever** — OCR, face detection, translation, and redaction use Apple on-device frameworks only.
 
-**Audit fixes applied:** user-visible errors for failed all-display stitch, empty Selection crop,
-and history restore/create failures; delay Capture countdown in the menu bar; scroll Capture
-guidance text; `outputFormat` persisted in history documents.
+## Features
 
-**Known limitations:** macOS 13 ScreenCaptureKit/AVFoundation fallbacks are written but untested
-on this machine; menu bar icon is still an SF Symbol placeholder; hotkey is fixed at ⌘⇧2; scroll
-Capture is menu-bar-driven (no in-overlay UI).
-
-**No network AI, ever** — a hard project constraint. Any later AI-adjacent feature must stay
-provably on-device through Apple frameworks.
-
-## Prompt audit
-
-Already built from the attached prompt:
-
-- Menu bar app shell, no dock icon, default **⌘⇧2** global Capture hotkey.
-- ScreenCaptureKit freeze-then-select flow with one Overlay per display.
-- Region Selection, window hover highlight, one-click window snap, aspect presets, and edge snap.
-- Delayed Capture and a stitched all-display Capture.
-- Editor with editable Annotations: Arrow, Rectangle, Text, Pencil, Censor, Number, Stamp,
-  Highlighter, Measure, and Spotlight.
-- Utility Tools: Loupe and Eyedropper.
-- Undo / redo for Annotation content, including move, resize, delete, create, and restyle.
-- Copy to clipboard and PNG/JPEG/HEIC/TIFF save with remembered last-used folder.
-- Beautify frame: 30 gradients, padding, corner radius, shadow, and window chrome.
-- On-device Core Image Adjustments with presets.
-- Local named Beautify brand kits and a re-editable local Capture history.
-- On-device Vision OCR, QR reading, face detection, and optional sensitive-text/face Censoring.
-- Manual scroll Capture with Vision registration plus pixel-overlap validation.
-- MP4 display recording (system audio; microphone/click highlights on macOS 15+), trim, MP4 export,
-  and local GIF export.
-
-Remaining later-phase work from the master prompt:
-
-- Final original name and icon before any public release.
-- Full interactive QA pass on a Mac with Screen Recording granted (Capture, scroll stitch,
-  recording/audio, exports, history restore) — automated GUI testing was blocked by TCC in CI.
-- Translation, smart erase, and WebP/AVIF codecs.
-- Supabase configuration, authenticated short-link upload, analytics, and optional history sync.
-- Cross-device handoff / iOS-iPadOS companion app.
-- Production marketing site deployment (a **draft static site** lives in [`Website/`](Website/) with
-  a local Debug zip — not signed, not notarized, codename branding).
+- Menu bar app (no dock icon), configurable global Capture hotkey (default ⌘⇧2)
+- ScreenCaptureKit freeze-then-select with window snap, aspect presets, delay, all-display stitch
+- 14 annotation Tools including ellipse and erase censor mode
+- Beautify (30 gradients), Adjustments, brand kits, PNG/JPEG/HEIC/TIFF export
+- Scroll capture with on-device Vision stitching
+- MP4 display recording with trim and GIF export
+- Re-editable local Capture history
+- Optional Supabase Storage upload (user-configured)
+- First-run onboarding and Sparkle updates
 
 ## Requirements
 
@@ -74,13 +34,29 @@ Remaining later-phase work from the master prompt:
 
 ```sh
 xcodegen generate
-xcodebuild -project Notable.xcodeproj -scheme Notable -configuration Debug \
-  -derivedDataPath .derivedData build
-open .derivedData/Build/Products/Debug/Notable.app
+xcodebuild -project Parcel.xcodeproj -scheme Parcel -configuration Debug \
+  -derivedDataPath .derivedData build CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES
+open .derivedData/Build/Products/Debug/Parcel.app
 ```
 
-Notable lives in the menu bar (no dock icon). Press **⌘⇧2** to capture. On first capture, grant
-**Screen Recording** in System Settings → Privacy & Security, then reopen Notable.
+Parcel lives in the menu bar. On first launch, complete the welcome flow and grant **Screen Recording**, then quit and reopen.
+
+## Release
+
+```sh
+DEVELOPMENT_TEAM=XXXXXXXXXX \
+APPLE_ID=you@example.com \
+APPLE_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx \
+./Scripts/release.sh
+```
+
+Set `SKIP_NOTARIZE=1` for unsigned local Release builds. See [Scripts/release.sh](Scripts/release.sh).
+
+## Website
+
+Marketing site in [`Website/`](Website/) — Astro + Tailwind, live at **[parcel.parable.dev](https://parcel.parable.dev)**. Repo: **[github.com/bswxyz/notable](https://github.com/bswxyz/notable)**.
+
+Connected services (GitHub, Vercel, Supabase, Mobbin, Higgsfield): [docs/integrations.md](docs/integrations.md).
 
 ## License
 
