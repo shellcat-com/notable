@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project Parcel.xcodeproj -scheme Parcel
+
+      - name: Build Debug
+        run: |
+          xcodebuild -project Parcel.xcodeproj -scheme Parcel -configuration Debug \
+            -derivedDataPath .derivedData build \
+            CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES
+
+  build-website:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Website
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: Website/package-lock.json
+      - run: npm ci && npm run build

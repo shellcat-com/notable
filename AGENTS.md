@@ -1,11 +1,11 @@
-# Notable — Build Guide & Fixed Decisions
+# Parcel — Build Guide & Fixed Decisions
 
-Notable is an **original, from-scratch macOS screenshot / annotation / (later) recording app**
-in SwiftUI. It is **not** a fork of anything. The open-source app *macshot* is used **only** as a
-feature-parity reference — no code, assets, naming, or glossary terms are copied from it.
+Parcel is an **original, from-scratch macOS Capture / annotation / recording app** from the
+Parable ecosystem, built in SwiftUI. It is **not** a fork of anything. The open-source app
+*macshot* is used **only** as a feature-parity reference — no code, assets, naming, or glossary
+terms are copied from it.
 
-> "Notable" is a working codename. It collides with an existing note-taking app, so a final
-> original name + icon is required before any public repo. Do not treat the name as settled.
+**Bundle ID:** `dev.parable.Parcel` · **Display name:** Parcel
 
 ---
 
@@ -42,21 +42,10 @@ as a class name (use **Annotation**), *crop box* (use **Selection**), *drawing/m
 
 ## Current phase
 
-**Phases 1–3 and local Phase 4: IMPLEMENTED and verified (Debug build on macOS 26).** macOS 13
-fallback capture/recording paths remain written-but-untested on this machine.
-Phase 1 (capture → annotate → copy/save loop) is complete. Phase 2 adds: Arrow ×5 styles,
-Censor ×3 modes (blur/pixelate/solid), Number/Stamp/Highlighter/Measure/Spotlight Tools,
-restyle-existing (selection-aware toolbar, coalesced undo), Loupe + Eyedropper utility Tools,
-Beautify (30 gradients, padding, radius, shadow, window chrome), and on-device Core Image
-Adjustments (7 params + presets).
-
-Phase 3 adds: manual scroll Capture (Vision registration plus sampled pixel-overlap validation),
-all-display stitched Capture, delay/aspect/boundary Capture controls, ScreenCaptureKit MP4 recording,
-trim, and GIF/MP4 export. The recorder uses the native ScreenCaptureKit output on macOS 15+ and an
-AVFoundation stream writer fallback on macOS 13–14.
-
-Local Phase 4 adds: re-editable disk-backed history, Vision OCR/QR/face detection, regex-guided
-local PII Censoring, face Censoring, PNG/JPEG/HEIC/TIFF output, and local Beautify brand kits.
+**Phases 1–4: IMPLEMENTED.** v1.0 Release build on macOS 26 with sandbox, Sparkle, onboarding,
+configurable hotkey, Supabase upload (user-configured), ellipse Tool, erase censor mode, and
+on-device translation (macOS 15+). macOS 13 capture/recording fallbacks remain written-but-untested
+on the primary dev machine — see `docs/MACOS13_VM_QA.md`.
 
 **Phase 2 render pipeline (the load-bearing design — do not regress):**
 raw Capture → adjusted base (CI chain; neutral short-circuits to raw) → censor blur/pixelate
@@ -71,12 +60,11 @@ ImageRenderer at capture.scale. One composition drives display AND export ("on s
 **Undo scope:** the ⌘Z stack covers annotation content ONLY (create/delete/move/resize/restyle).
 Adjustments and Beautify are document-level settings, out of the stack, with panel Resets.
 
-**Still not implemented:** translation, smart erase, WebP/AVIF codecs, Supabase upload/short links
-and analytics, sync, cross-device handoff, capture templates, iOS/iPadOS companion, and a
-**production** marketing site. A draft static download page exists in `Website/` (local Debug zip,
-codename branding — not signed/notarized). Supabase work requires a project URL, auth policy,
-bucket name, and final branded domain; never ship a pretend one-click upload without those real
-values.
+**Still not implemented (v1.1+):** WebP/AVIF codecs, cloud history sync, analytics, cross-device
+handoff, capture templates, iOS/iPadOS companion, App Store submission.
+
+**Release infra:** `Scripts/release.sh`, GitHub Actions, Next.js site at `Website/`, Sparkle appcast
+at `Website/public/appcast.xml`. Manual QA matrix: `docs/QA_CHECKLIST.md`.
 
 ---
 
@@ -85,7 +73,7 @@ values.
 - **Global hotkey: Carbon `RegisterEventHotKey`** (`Hotkeys/HotKeyManager.swift`), not `CGEventTap`.
   It is the mechanism `KeyboardShortcuts`/`HotKey` use and needs **no Accessibility permission** —
   eliminating a whole class of "permissions dead-end." Default: **⌘⇧2** (⌘⇧3/4/5 are macOS system
-  shortcuts). Configurable UI is a later task; the binding lives in one place for now.
+  shortcuts). **Configurable in Preferences** via `HotKeyRecorder`.
 - **Capture model: freeze-then-select.** On hotkey we capture a full-res image of every display
   via ScreenCaptureKit, show it frozen in the Overlay, and crop the Selection from those frozen
   pixels. No live-overlay window exclusion needed; gives the "frozen screen" feel.
@@ -97,21 +85,19 @@ values.
   (`Capture/OverlayWindow.swift` + `OverlayController.swift`). One panel per display. Esc cancels
   via a local key monitor; drag = region Selection; single click on a highlighted window = window snap.
 - **Menu bar: SwiftUI `MenuBarExtra`** + `LSUIElement` (no dock icon). App activation policy is
-  `.accessory`. Menu bar icon is an SF Symbol placeholder — **flagged for a custom icon pass**.
+  `.accessory`. Custom menu bar icon in `Assets.xcassets/MenuBarIcon`.
 - **Editor / Preferences windows: AppKit-managed `NSWindow` + `NSHostingView`** (not SwiftUI
   `WindowGroup`/`Settings`), because we open them programmatically with a captured image payload
   and want explicit lifecycle control on 13.0+.
 
 ## Sandbox
 
-Phase 1 dev builds are **non-sandboxed** (`Resources/Notable.entitlements` has
-`com.apple.security.app-sandbox = false`). Reason: Screen Recording TCC permission is keyed to the
-code signature and churns on every ad-hoc-signed rebuild under the sandbox — that would break
-"usable daily today." Hardening checklist before any public release:
-1. Set `com.apple.security.app-sandbox` = `true`.
-2. Add `com.apple.security.files.user-selected.read-write` (Save panel).
-3. Re-test that ScreenCaptureKit + the Save panel still work under sandbox.
-4. Adopt a stable signing identity so the TCC grant persists across rebuilds.
+Release builds are **sandboxed** (`Resources/Parcel.entitlements`):
+- `com.apple.security.app-sandbox` = `true`
+- `com.apple.security.files.user-selected.read-write` for Save panel
+
+Use a **stable Developer ID** signing identity so Screen Recording TCC persists across updates.
+Debug ad-hoc builds may need permission re-grant after rebuild.
 
 ## Concurrency
 
@@ -125,8 +111,9 @@ Swift 6 language mode once the surface is stable.
 
 ```
 project.yml                     XcodeGen spec — the .xcodeproj is generated, not committed.
-Sources/Notable/
-  App/          NotableApp (@main), AppDelegate, AppCoordinator (app state + wiring)
+Sources/Parcel/
+  App/          ParcelApp (@main), AppDelegate, AppCoordinator, AppIdentity migration
+  Onboarding/   WelcomeWindowController (first-run flow)
   MenuBar/      MenuBarContent (SwiftUI menu)
   Hotkeys/      HotKeyManager (Carbon global hotkey)
   Permissions/  ScreenRecordingPermission (TCC check/request + guidance)
@@ -135,18 +122,24 @@ Sources/Notable/
   Editor/       EditorModel, EditorWindowController, EditorView, output/beautify/adjustment support
   History/      Local re-editable Capture document store and History window
   Recording/    ScreenCaptureKit recorder, macOS 13 AVFoundation fallback, trim/export window
-  Vision/       On-device OCR, QR, face, and local redaction analysis
-  Preferences/  PreferencesWindowController, PreferencesView
-  Support/      Extensions (NSScreen/​CGRect helpers)
-  Resources/    Info.plist, Notable.entitlements, Assets.xcassets
+  Vision/       On-device OCR, QR, face, translation, and local redaction analysis
+  Upload/       Supabase Storage upload (optional, user-configured)
+  Preferences/  PreferencesWindowController, PreferencesView, HotKeyRecorder
+  Support/      Extensions, AppIdentity
+  Resources/    Info.plist, Parcel.entitlements, PrivacyInfo.xcprivacy, Assets.xcassets
+Scripts/        release.sh, generate_icons.sh, ExportOptions.plist
+Website/         Next.js marketing site (parcel.parable.dev)
+docs/           QA_CHECKLIST.md, MACOS13_VM_QA.md
 ```
 
 ### Build
 
 ```
-xcodegen generate          # regenerate Notable.xcodeproj from project.yml (after adding/moving files)
-xcodebuild -project Notable.xcodeproj -scheme Notable -configuration Debug build
+xcodegen generate          # regenerate Parcel.xcodeproj from project.yml
+xcodebuild -project Parcel.xcodeproj -scheme Parcel -configuration Debug build
 ```
 
-Run the built `.app` (from DerivedData) directly; on first Capture, grant **Screen Recording** in
-System Settings → Privacy & Security, then reopen Notable.
+Run the built `.app` (from DerivedData) directly; on first launch complete onboarding and grant
+**Screen Recording** in System Settings → Privacy & Security, then reopen Parcel.
+
+Release: `DEVELOPMENT_TEAM=… ./Scripts/release.sh`

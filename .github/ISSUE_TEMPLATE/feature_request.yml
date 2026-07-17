@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest an improvement to Parcel
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem and proposed solution. Parcel stays **local-first** — features that require network AI will not be accepted.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Who is this for and when does it come up?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work in the Editor, Overlay, or menu bar?
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints acknowledged
+      options:
+        - label: Stays on-device (no network AI / LLM)
+          required: true
+        - label: Uses canonical glossary (Capture, Annotation, Tool, …)
+          required: false

@@ -1,0 +1,56 @@
+name: Bug report
+description: Something broke in Parcel
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Include macOS version and whether Screen Recording was granted **after** install (quit + reopen required).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Steps to reproduce, if known.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Capture / Overlay
+        - Editor / Annotations
+        - Recording
+        - Vision / OCR
+        - Upload
+        - Preferences / Hotkeys
+        - Updates / Onboarding
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: e.g. macOS 26.0
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Parcel build
+      placeholder: Debug from source / Release zip / Homebrew
+  - type: checkboxes
+    id: permission
+    attributes:
+      label: Screen Recording
+      options:
+        - label: Granted in System Settings, and I quit/reopened Parcel after granting
+          required: false
