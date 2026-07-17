@@ -5,6 +5,9 @@ import SwiftUI
 /// defaults.
 struct BeautifyPanel: View {
     @ObservedObject var model: EditorModel
+    @ObservedObject private var brandKits = BrandKitStore.shared
+
+    @State private var kitName = ""
 
     private enum BackgroundKind: String, CaseIterable, Identifiable {
         case none, solid, gradient
@@ -22,6 +25,8 @@ struct BeautifyPanel: View {
                 Button("Reset") { model.beautify = BeautifySettings() }
             }
 
+            brandKitSection
+
             Group {
                 backgroundSection
                 Divider()
@@ -36,6 +41,40 @@ struct BeautifyPanel: View {
         }
         .padding(14)
         .frame(width: 320)
+    }
+
+    private var brandKitSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                TextField("Brand kit name", text: $kitName)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12))
+                Button {
+                    brandKits.save(name: kitName, settings: model.beautify)
+                    kitName = ""
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .help("Save current Beautify settings as a brand kit")
+                .disabled(kitName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            if !brandKits.kits.isEmpty {
+                Menu {
+                    ForEach(brandKits.kits) { kit in
+                        Button(kit.name) { model.beautify = kit.settings; model.beautifyEnabled = true }
+                    }
+                    Divider()
+                    Menu("Remove Brand Kit") {
+                        ForEach(brandKits.kits) { kit in
+                            Button(kit.name, role: .destructive) { brandKits.remove(kit.id) }
+                        }
+                    }
+                } label: {
+                    Label("Apply Brand Kit", systemImage: "paintpalette")
+                }
+                .menuStyle(.borderlessButton)
+            }
+        }
     }
 
     // MARK: Background

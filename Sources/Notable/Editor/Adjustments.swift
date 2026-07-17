@@ -2,7 +2,7 @@ import Foundation
 
 /// Per-pixel color transform applied to the base Capture BEFORE Annotations composite over it.
 /// Pure value type; the CIFilter chain lives in `CaptureAdjuster`. Neutral == untouched Capture.
-struct Adjustments: Equatable {
+struct Adjustments: Equatable, Codable {
     var brightness: Double = 0   // CIColorControls, additive
     var contrast: Double = 1     // CIColorControls, multiplicative
     var saturation: Double = 1   // CIColorControls, multiplicative

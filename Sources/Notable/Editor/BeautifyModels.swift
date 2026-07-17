@@ -13,7 +13,7 @@ extension RGBAColor {
 }
 
 /// A named linear-gradient background for the Beautify frame.
-struct GradientPreset: Identifiable, Equatable {
+struct GradientPreset: Identifiable, Equatable, Codable {
     let id: String
     let name: String
     let colors: [RGBAColor]
@@ -85,28 +85,28 @@ struct GradientPreset: Identifiable, Equatable {
 /// This type is the single source of the geometry formulas:
 ///   innerOrigin = (padding, padding + chromeHeight)
 ///   outerSize   = (captureW + 2·padding, captureH + 2·padding + chromeHeight)
-struct BeautifySettings: Equatable {
+struct BeautifySettings: Equatable, Codable {
 
-    enum Background: Equatable {
+    enum Background: Equatable, Codable {
         case none
         case solid(RGBAColor)
         case gradient(GradientPreset)
     }
 
-    struct ShadowSettings: Equatable {
+    struct ShadowSettings: Equatable, Codable {
         var enabled = true
         var blur: CGFloat = 24
         var opacity: Double = 0.35
         var yOffset: CGFloat = 12
     }
 
-    enum ChromeStyle: String, CaseIterable, Identifiable, Equatable {
+    enum ChromeStyle: String, CaseIterable, Identifiable, Equatable, Codable {
         case light, dark
         var id: String { rawValue }
         var label: String { self == .light ? "Light" : "Dark" }
     }
 
-    struct ChromeSettings: Equatable {
+    struct ChromeSettings: Equatable, Codable {
         var enabled = false
         var title = ""
         var style: ChromeStyle = .light
