@@ -70,8 +70,6 @@ struct PreferencesView: View {
 
     @MainActor
     private func refreshPermissionStatus() async {
-        let preflight = ScreenRecordingPermission.isGranted
-        let captureAPIWorks = preflight ? true : await ScreenRecordingPermission.canUseCaptureAPI()
-        hasScreenPermission = preflight || captureAPIWorks
+        hasScreenPermission = await ScreenRecordingPermission.hasEffectiveAccess()
     }
 }

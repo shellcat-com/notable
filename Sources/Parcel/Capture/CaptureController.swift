@@ -53,7 +53,8 @@ final class CaptureController {
             presentOverlay(frozen)
         } catch {
             NSLog("Parcel: capture failed — \(error)")
-            if !ScreenRecordingPermission.isGranted {
+            let hasAccess = await ScreenRecordingPermission.hasEffectiveAccess()
+            if !hasAccess {
                 onNeedsPermission?()
             } else {
                 onFailure?("Could not freeze the screen for Capture. \(error.localizedDescription)")
@@ -74,7 +75,8 @@ final class CaptureController {
             }
         } catch {
             NSLog("Parcel: multi-display capture failed — \(error)")
-            if !ScreenRecordingPermission.isGranted {
+            let hasAccess = await ScreenRecordingPermission.hasEffectiveAccess()
+            if !hasAccess {
                 onNeedsPermission?()
             } else {
                 onFailure?("Could not capture all displays. \(error.localizedDescription)")

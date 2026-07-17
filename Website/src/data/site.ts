@@ -3,46 +3,91 @@ export const tools = [
   'Number', 'Stamp', 'Highlighter', 'Measure', 'Spotlight', 'Loupe', 'Eyedropper',
 ];
 
+export const stats = [
+  { value: '14', label: 'Annotation tools' },
+  { value: '30', label: 'Beautify gradients' },
+  { value: '4', label: 'Export formats' },
+  { value: '0', label: 'Cloud AI calls' },
+];
+
+export const logos = [
+  'ScreenCaptureKit', 'Vision', 'Core Image', 'AVFoundation', 'SwiftUI', 'Supabase',
+];
+
 export const features = [
   {
+    id: 'capture',
     title: 'Instant Capture',
-    body: 'Global hotkey freezes your screen. Select any region, snap to windows, or stitch all displays.',
-    span: 'md:col-span-2',
+    body: 'Global hotkey freezes every display. Drag a region, snap to windows, or stitch all screens — pixels stay full resolution.',
+    size: 'wide' as const,
+    icon: 'camera',
   },
   {
-    title: '14 Annotation Tools',
-    body: 'Arrows ×5 styles, ellipse, censor ×4 modes (blur, pixelate, solid, erase), stamps, spotlight, and measure.',
-    span: '',
+    id: 'tools',
+    title: '14 annotation tools',
+    body: 'Arrows ×5 styles, ellipse, censor ×4 modes, stamps, spotlight, measure, and utility loupe + eyedropper.',
+    size: 'sm' as const,
+    icon: 'pen',
   },
   {
+    id: 'scroll',
     title: 'Scroll Capture',
-    body: 'Select a region from the overlay, scroll the source, and stitch a tall Capture with on-device Vision.',
-    span: '',
+    body: 'Select a tall region from the Overlay, scroll the source, and stitch with on-device Vision registration.',
+    size: 'sm' as const,
+    icon: 'scroll',
   },
   {
-    title: 'Screen Recording',
-    body: 'MP4 display recording at 30/60/120 fps, system audio, trim editor, and local GIF export.',
-    span: 'md:col-span-2',
+    id: 'record',
+    title: 'Screen recording',
+    body: 'MP4 at 30/60/120 fps with system audio, trim editor, and local GIF export — no subscription recorder.',
+    size: 'wide' as const,
+    icon: 'video',
   },
   {
+    id: 'beautify',
     title: 'Beautify',
-    body: '30 gradient backgrounds, window chrome, padding, radius, shadow, and saved brand kits.',
-    span: '',
+    body: '30 gradient backgrounds, window chrome, padding, radius, shadow, and saved brand kits for consistent ship-ready Captures.',
+    size: 'sm' as const,
+    icon: 'sparkles',
   },
   {
+    id: 'vision',
     title: 'Local Vision',
-    body: 'OCR, QR, face detection, PII censoring, and on-device translation (macOS 15+) — nothing leaves your Mac unless you upload.',
-    span: '',
+    body: 'OCR, QR, face detection, regex PII censoring, and on-device translation — nothing leaves your Mac unless you upload.',
+    size: 'tall' as const,
+    icon: 'eye',
   },
   {
-    title: 'Capture History',
-    body: 'Disk-backed, re-editable documents restore annotations, adjustments, beautify, and output format.',
-    span: 'md:col-span-2',
+    id: 'history',
+    title: 'Capture history',
+    body: 'Disk-backed documents restore annotations, adjustments, beautify, and output format — re-edit any past Capture.',
+    size: 'sm' as const,
+    icon: 'history',
   },
   {
-    title: 'Supabase Upload',
-    body: 'Configure your bucket once, then upload from the Editor and copy a public link instantly.',
-    span: '',
+    id: 'upload',
+    title: 'Supabase upload',
+    body: 'Configure your bucket once, upload from the Editor, and copy a public link. Real Storage — not a pretend button.',
+    size: 'sm' as const,
+    icon: 'cloud',
+  },
+];
+
+export const workflow = [
+  {
+    step: '01',
+    title: 'Freeze & select',
+    body: 'Press ⌘⇧2 (configurable). ScreenCaptureKit captures every display; the Overlay lets you drag, snap, or scroll-capture.',
+  },
+  {
+    step: '02',
+    title: 'Mark up locally',
+    body: 'Annotate, censor, beautify, and adjust in the Editor. Undo covers the Layer stack; settings stay document-level.',
+  },
+  {
+    step: '03',
+    title: 'Copy, save, or upload',
+    body: 'PNG/JPEG/HEIC/TIFF export matches what you see on screen. Optional Supabase upload copies a link to the clipboard.',
   },
 ];
 
@@ -58,11 +103,11 @@ export const shortcuts = [
 export const guides = [
   {
     title: 'Redact sensitive text locally',
-    body: 'Open Inspect Capture → Recognize Text → Censor Detected Sensitive Text. Regex runs on-device.',
+    body: 'Inspect Capture → Recognize Text → Censor Detected Sensitive Text. Regex runs on-device via Vision.',
   },
   {
     title: 'Scroll a long page',
-    body: 'In the Overlay click Scroll Capture, drag a tall region, then use the menu bar to add frames and finish.',
+    body: 'In the Overlay choose Scroll Capture, drag a tall region, then add frames from the menu bar and finish.',
   },
   {
     title: 'Save a brand kit',
@@ -70,7 +115,7 @@ export const guides = [
   },
   {
     title: 'Upload to Supabase',
-    body: 'Add your project URL, anon key, and bucket in Preferences. Upload from the Editor copies the link.',
+    body: 'Paste project URL, anon key, and bucket in Preferences. Upload from the Editor copies the link.',
   },
 ];
 
@@ -91,11 +136,4 @@ export const faqs = [
     q: 'How do I configure Supabase upload?',
     a: 'Create a public Storage bucket, paste the project URL and anon key in Preferences, and set an optional custom public base URL.',
   },
-];
-
-export const stats = [
-  { value: '14', label: 'Tools' },
-  { value: '30', label: 'Gradients' },
-  { value: '4', label: 'Export formats' },
-  { value: '0', label: 'Cloud AI calls' },
 ];

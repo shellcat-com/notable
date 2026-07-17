@@ -93,9 +93,7 @@ struct WelcomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onReceive(poll) { _ in
             Task { @MainActor in
-                let preflight = ScreenRecordingPermission.isGranted
-                let captureAPIWorks = preflight ? true : await ScreenRecordingPermission.canUseCaptureAPI()
-                hasPermission = preflight || captureAPIWorks
+                hasPermission = await ScreenRecordingPermission.hasEffectiveAccess()
             }
         }
     }

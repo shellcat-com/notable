@@ -4,12 +4,16 @@
       <stop stop-color="#8b5cf6"/>
       <stop offset="1" stop-color="#ec4899"/>
     </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    </pattern>
   </defs>
   <rect width="1200" height="630" fill="#0b0d12"/>
-  <circle cx="200" cy="120" r="220" fill="#8b5cf6" opacity="0.25"/>
-  <circle cx="980" cy="520" r="260" fill="#ec4899" opacity="0.18"/>
-  <text x="80" y="300" fill="white" font-family="Inter, system-ui, sans-serif" font-size="72" font-weight="700">Parcel</text>
-  <text x="80" y="380" fill="#cbd5e1" font-family="Inter, system-ui, sans-serif" font-size="36">Capture, mark up, and ship — private by default</text>
-  <rect x="80" y="430" width="280" height="64" rx="32" fill="url(#g)"/>
-  <text x="130" y="472" fill="white" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="600">Download free</text>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <circle cx="180" cy="100" r="240" fill="#8b5cf6" opacity="0.18"/>
+  <circle cx="1020" cy="520" r="280" fill="#ec4899" opacity="0.14"/>
+  <text x="80" y="280" fill="white" font-family="Inter, system-ui, sans-serif" font-size="80" font-weight="700">Parcel</text>
+  <text x="80" y="360" fill="#94a3b8" font-family="Inter, system-ui, sans-serif" font-size="34">Local Capture for macOS — annotate, record, redact</text>
+  <rect x="80" y="410" width="300" height="64" rx="16" fill="url(#g)"/>
+  <text x="128" y="452" fill="white" font-family="Inter, system-ui, sans-serif" font-size="26" font-weight="600">Download free</text>
 </svg>
