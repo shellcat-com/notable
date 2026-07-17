@@ -11,7 +11,7 @@ feature-parity reference — no code, assets, naming, or glossary terms are copi
 
 ## Hard constraints (non-negotiable — do not relitigate)
 
-1. **No LLM / network AI calls anywhere.** Not Claude, not OpenAI, nothing that sends data
+1. **No LLM / network AI calls anywhere.** Not Codex, not OpenAI, nothing that sends data
    off-device for AI. On-device Apple frameworks only (Vision; local Apple Intelligence APIs
    only if stable on-device). Any "AI" feature must be provably local.
 2. **macOS 13.0+**, Apple Silicon + Intel.

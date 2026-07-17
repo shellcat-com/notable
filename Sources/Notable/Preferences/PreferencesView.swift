@@ -39,8 +39,18 @@ struct PreferencesView: View {
         }
         .formStyle(.grouped)
         .frame(width: 440, height: 260)
-        .onReceive(poll) { _ in
-            hasScreenPermission = ScreenRecordingPermission.isGranted
+        .task {
+            await refreshPermissionStatus()
         }
+        .onReceive(poll) { _ in
+            Task { await refreshPermissionStatus() }
+        }
+    }
+
+    @MainActor
+    private func refreshPermissionStatus() async {
+        let preflight = ScreenRecordingPermission.isGranted
+        let captureAPIWorks = preflight ? true : await ScreenRecordingPermission.canUseCaptureAPI()
+        hasScreenPermission = preflight || captureAPIWorks
     }
 }

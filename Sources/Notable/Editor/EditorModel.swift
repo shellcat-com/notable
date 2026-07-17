@@ -1,5 +1,6 @@
 import AppKit
 import CoreImage
+import ImageIO
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -65,6 +66,15 @@ final class EditorModel: ObservableObject {
 
     var effectiveSettings: BeautifySettings { beautifyEnabled ? beautify : .disabled }
 
+    // MARK: Local output
+
+    @Published var outputFormat: OutputFormat = .png
+
+    // MARK: On-device Vision
+
+    @Published private(set) var visionAnalysis = VisionAnalysis()
+    @Published private(set) var isAnalyzingVision = false
+
     // MARK: Utilities (Loupe / Eyedropper) — never touch annotations or undo
 
     private var _pixelSampler: CapturePixelSampler?
@@ -86,14 +96,32 @@ final class EditorModel: ObservableObject {
 
     // MARK: Init
 
-    init(capture: Capture) {
+    init(capture: Capture, document: CaptureDocument? = nil) {
+        let restoredAnnotations = document?.annotations ?? []
+        let restoredAdjustments = document?.adjustments ?? .neutral
+        let restoredBeautify = document?.beautify ?? BeautifySettings()
+        let restoredBeautifyEnabled = document?.beautifyEnabled ?? false
+        let restoredOutputFormat = document?.outputFormat ?? .png
+        let restoredCensors = restoredAnnotations.contains { annotation in
+            if case .censor = annotation.kind { return true }
+            return false
+        }
+        let captureAdjuster = CaptureAdjuster(capture: capture)
+        let adjusted = captureAdjuster.makeAdjusted(restoredAdjustments)
+
         self.capture = capture
-        adjuster = CaptureAdjuster(capture: capture)
-        adjustedImage = capture.image
-        baseImage = NSImage(cgImage: capture.image, size: capture.pointSize)
-        // Placeholders until a Censor first needs them (ensureCensorSourcesReady).
-        blurredImage = capture.image
-        pixelatedImage = capture.image
+        adjuster = captureAdjuster
+        annotations = restoredAnnotations
+        adjustments = restoredAdjustments
+        beautify = restoredBeautify
+        beautifyEnabled = restoredBeautifyEnabled
+        outputFormat = restoredOutputFormat
+        adjustedImage = adjusted
+        baseImage = NSImage(cgImage: adjusted, size: capture.pointSize)
+        censorSourcesReady = restoredCensors
+        blurredImage = restoredCensors ? captureAdjuster.makeBlurred(restoredAdjustments) : adjusted
+        pixelatedImage = restoredCensors ? captureAdjuster.makePixelated(restoredAdjustments) : adjusted
+        displayedAdjustments = restoredAdjustments
     }
 
     // MARK: Derived
@@ -420,6 +448,62 @@ final class EditorModel: ObservableObject {
         exitUtilityTool()
     }
 
+    // MARK: On-device Vision
+
+    /// Recognizes text, QR codes, and faces with Apple Vision. The active Adjustment values are
+    /// rendered first so inspection matches the pixels the Editor will export.
+    func inspectCapture() {
+        endEditingText()
+        let image = exportImages().base.cgImage(forProposedRect: nil, context: nil, hints: nil) ?? adjustedImage
+        let size = pointSize
+        isAnalyzingVision = true
+        Task { [weak self] in
+            let analysis = await VisionAnalyzer.analyze(image: image, pointSize: size)
+            guard let self else { return }
+            visionAnalysis = analysis
+            isAnalyzingVision = false
+        }
+    }
+
+    func copyRecognizedText() {
+        let text = visionAnalysis.recognizedText
+        guard !text.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    func copyQRCode(_ code: VisionQRCode) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(code.payload, forType: .string)
+    }
+
+    /// Adds solid Censors for likely email addresses, phone numbers, and card-like strings.
+    /// Detection is local and deliberately redacts the entire recognized line rather than risk
+    /// leaking a nearby character at the boundary.
+    func censorDetectedPII() {
+        addCensors(visionAnalysis.piiText.map(\.rect), mode: .solid)
+    }
+
+    /// Adds blur Censors around faces found locally by Vision.
+    func censorDetectedFaces() {
+        addCensors(visionAnalysis.faces.map(\.rect), mode: .blur)
+    }
+
+    private func addCensors(_ rects: [CGRect], mode: CensorMode) {
+        guard !rects.isEmpty else { return }
+        pushUndo()
+        let style = AnnotationStyle(
+            color: .black,
+            lineWidth: 0,
+            fontSize: textFontSize,
+            arrowStyle: .standard,
+            censorMode: mode
+        )
+        annotations.append(contentsOf: rects.map { Annotation(kind: .censor(rect: $0), style: style) })
+        selectedID = annotations.last?.id
+        ensureCensorSourcesReady()
+    }
+
     // MARK: Output
 
     func copyToClipboard() {
@@ -432,14 +516,14 @@ final class EditorModel: ObservableObject {
     func save() {
         endEditingText() // commit any in-progress text before rendering
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [.png]
+        panel.allowedContentTypes = [outputFormat.contentType]
         panel.canCreateDirectories = true
-        panel.nameFieldStringValue = Self.defaultFileName()
+        panel.nameFieldStringValue = Self.defaultFileName(format: outputFormat)
         if let dir = Self.lastSaveDirectory { panel.directoryURL = dir }
 
         panel.begin { [weak self] response in
             guard response == .OK, let url = panel.url, let self else { return }
-            self.writePNG(to: url)
+            self.writeImage(to: url)
             Self.lastSaveDirectory = url.deletingLastPathComponent()
         }
     }
@@ -507,22 +591,57 @@ final class EditorModel: ObservableObject {
         return renderer.cgImage
     }
 
-    private func writePNG(to url: URL) {
+    private func writeImage(to url: URL) {
         guard let cgImage = renderedCGImage() else {
-            NSLog("Notable: failed to render image for save")
+            NSLog("Notable: failed to render Capture for save")
             return
         }
-        let rep = NSBitmapImageRep(cgImage: cgImage)
-        rep.size = effectiveSettings.outerSize(for: pointSize)
-        guard let data = rep.representation(using: .png, properties: [:]) else {
-            NSLog("Notable: failed to encode PNG")
+        let data: Data?
+        if outputFormat == .heic {
+            let destinationData = NSMutableData()
+            guard let destination = CGImageDestinationCreateWithData(
+                destinationData, outputFormat.contentType.identifier as CFString, 1, nil
+            ) else {
+                NSLog("Notable: failed to create HEIC destination")
+                return
+            }
+            CGImageDestinationAddImage(destination, cgImage, nil)
+            data = CGImageDestinationFinalize(destination) ? destinationData as Data : nil
+        } else if let bitmapType = outputFormat.bitmapType {
+            let rep = NSBitmapImageRep(cgImage: cgImage)
+            rep.size = effectiveSettings.outerSize(for: pointSize)
+            var properties: [NSBitmapImageRep.PropertyKey: Any] = [:]
+            if outputFormat == .jpeg { properties[.compressionFactor] = 0.92 }
+            data = rep.representation(using: bitmapType, properties: properties)
+        } else {
+            data = nil
+        }
+        guard let data else {
+            NSLog("Notable: failed to encode \(outputFormat.label)")
             return
         }
         do {
             try data.write(to: url)
         } catch {
-            NSLog("Notable: failed to write PNG — \(error)")
+            NSLog("Notable: failed to write Capture — \(error)")
         }
+    }
+
+    // MARK: Local re-editable history
+
+    func historyDocument(id: UUID, createdAt: Date, captureFileName: String) -> CaptureDocument {
+        CaptureDocument(
+            id: id,
+            createdAt: createdAt,
+            updatedAt: Date(),
+            captureFileName: captureFileName,
+            captureScale: capture.scale,
+            annotations: annotations,
+            adjustments: adjustments,
+            beautify: beautify,
+            beautifyEnabled: beautifyEnabled,
+            outputFormat: outputFormat
+        )
     }
 
     // MARK: Save location memory
@@ -537,9 +656,9 @@ final class EditorModel: ObservableObject {
         set { UserDefaults.standard.set(newValue?.path, forKey: lastSaveDirectoryKey) }
     }
 
-    private static func defaultFileName() -> String {
+    private static func defaultFileName(format: OutputFormat) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
-        return "Notable \(formatter.string(from: Date())).png"
+        return "Notable \(formatter.string(from: Date())).\(format.fileExtension)"
     }
 }

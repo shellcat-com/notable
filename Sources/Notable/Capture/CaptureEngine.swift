@@ -113,6 +113,47 @@ final class CaptureEngine {
         guard let cropped = result.screen.image.cropping(to: pixelRect) else { return nil }
         return Capture(image: cropped, scale: scale)
     }
+
+    /// Combines all frozen displays into one Capture in their actual desktop arrangement. Mixed
+    /// density displays are normalized to the highest connected backing scale so no source image
+    /// is upscaled below its Capture-point dimensions.
+    func makeStitchedCapture(from screens: [FrozenScreen]) -> Capture? {
+        guard !screens.isEmpty else { return nil }
+        let desktop = screens.map { $0.screen.frame }.reduce(screens[0].screen.frame) { $0.union($1) }
+        let scale = screens.map(\.scale).max() ?? 1
+        let width = Int((desktop.width * scale).rounded(.up))
+        let height = Int((desktop.height * scale).rounded(.up))
+        guard width > 0, height > 0,
+              let context = CGContext(
+                data: nil,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else { return nil }
+
+        context.setFillColor(NSColor.black.cgColor)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        // Convert Core Graphics' bottom-left coordinates to the Canvas' top-left Capture space.
+        context.translateBy(x: 0, y: CGFloat(height))
+        context.scaleBy(x: scale, y: -scale)
+
+        for frozen in screens {
+            let frame = frozen.screen.frame
+            let rect = CGRect(
+                x: frame.minX - desktop.minX,
+                y: desktop.maxY - frame.maxY,
+                width: frame.width,
+                height: frame.height
+            )
+            context.interpolationQuality = .high
+            context.draw(frozen.image, in: rect)
+        }
+        guard let image = context.makeImage() else { return nil }
+        return Capture(image: image, scale: scale)
+    }
 }
 
 // MARK: - macOS 13 fallback: single-frame SCStream capture

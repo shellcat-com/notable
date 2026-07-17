@@ -1,11 +1,13 @@
 import AppKit
 import CoreGraphics
+import ScreenCaptureKit
 
 /// Thin wrapper over the Screen Recording TCC permission that ScreenCaptureKit requires.
 ///
 /// macOS quirk: the very first `CGRequestScreenCaptureAccess()` adds the app to the Screen
 /// Recording list and shows the system prompt, but the running process usually keeps reading
-/// `false` until it is relaunched. We surface that explicitly instead of failing silently.
+/// `false` until it is relaunched. On recent macOS releases it can also lag behind the actual
+/// ScreenCaptureKit grant for an ad-hoc dev build, so Capture startup treats this as advisory.
 enum ScreenRecordingPermission {
 
     static var isGranted: Bool {
@@ -18,6 +20,25 @@ enum ScreenRecordingPermission {
     static func request() -> Bool {
         CGRequestScreenCaptureAccess()
         return CGPreflightScreenCaptureAccess()
+    }
+
+    /// Requests access when the preflight probe says it is missing, but intentionally does not
+    /// require the immediate result to be true. The capture attempt itself is the source of truth.
+    static func requestIfNeeded() {
+        if !isGranted { CGRequestScreenCaptureAccess() }
+    }
+
+    /// Uses the same framework as Capture/recording to verify the grant. This is intentionally
+    /// separate from `isGranted` because TCC preflight can be stale for local dev builds.
+    static func canUseCaptureAPI() async -> Bool {
+        do {
+            let content = try await SCShareableContent.excludingDesktopWindows(
+                false, onScreenWindowsOnly: true
+            )
+            return !content.displays.isEmpty
+        } catch {
+            return false
+        }
     }
 
     /// Deep-link to the Screen Recording pane in System Settings.

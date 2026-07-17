@@ -4,9 +4,11 @@ import SwiftUI
 struct EditorView: View {
     @ObservedObject var model: EditorModel
     var onClose: () -> Void
+    var onShowHistory: () -> Void
 
     @State private var showingAdjust = false
     @State private var showingBeautify = false
+    @State private var showingVision = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -159,6 +161,15 @@ struct EditorView: View {
                 .popover(isPresented: $showingBeautify, arrowEdge: .bottom) {
                     BeautifyPanel(model: model)
                 }
+
+            Button { showingVision.toggle() } label: { Image(systemName: "viewfinder.circle") }
+                .buttonStyle(.borderless)
+                .foregroundStyle(model.visionAnalysis.text.isEmpty && model.visionAnalysis.faces.isEmpty
+                    ? Color.primary : Color.accentColor)
+                .help("Inspect Capture")
+                .popover(isPresented: $showingVision, arrowEdge: .bottom) {
+                    VisionPanel(model: model)
+                }
         }
     }
 
@@ -191,12 +202,35 @@ struct EditorView: View {
             }
             .keyboardShortcut("c", modifiers: .command)
 
+            Menu {
+                ForEach(OutputFormat.allCases) { format in
+                    Button {
+                        model.outputFormat = format
+                    } label: {
+                        if model.outputFormat == format {
+                            Label(format.label, systemImage: "checkmark")
+                        } else {
+                            Text(format.label)
+                        }
+                    }
+                }
+            } label: {
+                Text(model.outputFormat.label)
+            }
+            .menuStyle(.borderlessButton)
+            .help("Output format")
+
             Button {
                 model.save()
             } label: {
                 Label("Save…", systemImage: "square.and.arrow.down")
             }
             .keyboardShortcut("s", modifiers: .command)
+
+            Button(action: onShowHistory) {
+                Image(systemName: "clock.arrow.circlepath")
+            }
+            .help("Capture History")
 
             Button {
                 onClose()
@@ -235,5 +269,67 @@ struct EditorView: View {
 
     private var censorModeBinding: Binding<CensorMode> {
         Binding(get: { model.displayCensorMode }, set: { model.setCensorMode($0) })
+    }
+}
+
+/// Small, fully local Vision surface. Results are not baked into the Capture unless the user
+/// explicitly asks to create Censor Annotations from them.
+private struct VisionPanel: View {
+    @ObservedObject var model: EditorModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Inspect Capture").font(.headline)
+                Spacer()
+                if model.isAnalyzingVision { ProgressView().controlSize(.small) }
+            }
+
+            Button("Recognize Text, Faces & QR Codes") { model.inspectCapture() }
+                .disabled(model.isAnalyzingVision)
+
+            if hasResults {
+                Divider()
+                resultSummary
+            } else if !model.isAnalyzingVision {
+                Text("Inspection stays on this Mac. It can recognize text, find faces, and read QR codes.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(14)
+        .frame(width: 330)
+    }
+
+    private var hasResults: Bool {
+        !model.visionAnalysis.text.isEmpty || !model.visionAnalysis.faces.isEmpty || !model.visionAnalysis.qrCodes.isEmpty
+    }
+
+    @ViewBuilder
+    private var resultSummary: some View {
+        if !model.visionAnalysis.text.isEmpty {
+            HStack {
+                Label("\(model.visionAnalysis.text.count) text regions", systemImage: "text.viewfinder")
+                Spacer()
+                Button("Copy Text") { model.copyRecognizedText() }
+            }
+        }
+        if !model.visionAnalysis.piiText.isEmpty {
+            Button("Censor Detected Sensitive Text") { model.censorDetectedPII() }
+        }
+        if !model.visionAnalysis.faces.isEmpty {
+            Button("Censor \(model.visionAnalysis.faces.count) Faces") { model.censorDetectedFaces() }
+        }
+        if !model.visionAnalysis.qrCodes.isEmpty {
+            Divider()
+            Text("QR Codes").font(.subheadline.weight(.medium))
+            ForEach(model.visionAnalysis.qrCodes) { code in
+                Button(code.payload) { model.copyQRCode(code) }
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help("Copy QR code payload")
+            }
+        }
     }
 }

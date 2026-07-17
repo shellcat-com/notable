@@ -55,7 +55,7 @@ enum Tool: String, CaseIterable, Identifiable {
 // MARK: - Appearance enums
 
 /// Arrow appearance. Style affects head/shaft shape only; geometry stays (start, end).
-enum ArrowStyle: String, CaseIterable, Identifiable, Equatable {
+enum ArrowStyle: String, CaseIterable, Identifiable, Equatable, Codable {
     case standard   // straight shaft + filled triangle head
     case open       // straight shaft + stroked chevron head
     case double     // straight shaft + filled heads at both ends
@@ -86,7 +86,7 @@ enum ArrowStyle: String, CaseIterable, Identifiable, Equatable {
 }
 
 /// How a Censor hides its region.
-enum CensorMode: String, CaseIterable, Identifiable, Equatable {
+enum CensorMode: String, CaseIterable, Identifiable, Equatable, Codable {
     case blur       // gaussian blur of the (adjusted) Capture
     case pixelate   // mosaic of the (adjusted) Capture
     case solid      // opaque fill in the Annotation's color
@@ -110,7 +110,7 @@ enum CensorMode: String, CaseIterable, Identifiable, Equatable {
     }
 }
 
-enum SpotlightShape: String, CaseIterable, Identifiable, Equatable, Hashable {
+enum SpotlightShape: String, CaseIterable, Identifiable, Equatable, Hashable, Codable {
     case rectangle, ellipse
 
     var id: String { rawValue }
@@ -121,7 +121,7 @@ enum SpotlightShape: String, CaseIterable, Identifiable, Equatable, Hashable {
 // MARK: - Style
 
 /// A stored, resolution-independent color (sRGB) so Annotations are Codable-ready for later sync.
-struct RGBAColor: Equatable {
+struct RGBAColor: Equatable, Codable {
     var red: Double
     var green: Double
     var blue: Double
@@ -157,7 +157,7 @@ struct RGBAColor: Equatable {
 
 /// Appearance of one Annotation. Defaults keep the short memberwise init source-compatible;
 /// arrowStyle is consulted only for `.arrow`, censorMode only for `.censor`.
-struct AnnotationStyle: Equatable {
+struct AnnotationStyle: Equatable, Codable {
     var color: RGBAColor
     var lineWidth: CGFloat
     var fontSize: CGFloat
@@ -175,7 +175,7 @@ enum Handle: Equatable {
 
 /// The geometry + payload of one Annotation, in **Capture point coordinates** (resolution
 /// independent). Rendering and hit-testing convert to view/pixel space via a scale factor.
-enum AnnotationKind: Equatable {
+enum AnnotationKind: Equatable, Codable {
     case arrow(start: CGPoint, end: CGPoint)
     case rectangle(rect: CGRect)
     case censor(rect: CGRect)
@@ -194,7 +194,7 @@ enum AnnotationKind: Equatable {
 }
 
 /// One editable mark-up object composited over the Capture.
-struct Annotation: Identifiable, Equatable {
+struct Annotation: Identifiable, Equatable, Codable {
     let id: UUID
     var kind: AnnotationKind
     var style: AnnotationStyle
@@ -208,6 +208,106 @@ struct Annotation: Identifiable, Equatable {
     /// Style-aware hit test (arrow shafts follow their ArrowStyle; highlighter uses its true width).
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> Bool {
         kind.hitTest(point, tolerance: tolerance, lineWidth: style.lineWidth, arrowStyle: style.arrowStyle)
+    }
+}
+
+extension AnnotationKind {
+    private enum CodingKeys: String, CodingKey {
+        case type, start, end, rect, string, points, center, radius, value, emoji, showsSize, shape
+    }
+
+    private enum Kind: String, Codable {
+        case arrow, rectangle, censor, text, pencil, number, stamp, highlight, measure, spotlight
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        switch try container.decode(Kind.self, forKey: .type) {
+        case .arrow:
+            self = .arrow(
+                start: try container.decode(CGPoint.self, forKey: .start),
+                end: try container.decode(CGPoint.self, forKey: .end)
+            )
+        case .rectangle:
+            self = .rectangle(rect: try container.decode(CGRect.self, forKey: .rect))
+        case .censor:
+            self = .censor(rect: try container.decode(CGRect.self, forKey: .rect))
+        case .text:
+            self = .text(
+                rect: try container.decode(CGRect.self, forKey: .rect),
+                string: try container.decode(String.self, forKey: .string)
+            )
+        case .pencil:
+            self = .pencil(points: try container.decode([CGPoint].self, forKey: .points))
+        case .number:
+            self = .number(
+                center: try container.decode(CGPoint.self, forKey: .center),
+                radius: try container.decode(CGFloat.self, forKey: .radius),
+                value: try container.decode(Int.self, forKey: .value)
+            )
+        case .stamp:
+            self = .stamp(
+                rect: try container.decode(CGRect.self, forKey: .rect),
+                emoji: try container.decode(String.self, forKey: .emoji)
+            )
+        case .highlight:
+            self = .highlight(points: try container.decode([CGPoint].self, forKey: .points))
+        case .measure:
+            self = .measure(
+                start: try container.decode(CGPoint.self, forKey: .start),
+                end: try container.decode(CGPoint.self, forKey: .end),
+                showsSize: try container.decode(Bool.self, forKey: .showsSize)
+            )
+        case .spotlight:
+            self = .spotlight(
+                rect: try container.decode(CGRect.self, forKey: .rect),
+                shape: try container.decode(SpotlightShape.self, forKey: .shape)
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case let .arrow(start, end):
+            try container.encode(Kind.arrow, forKey: .type)
+            try container.encode(start, forKey: .start)
+            try container.encode(end, forKey: .end)
+        case let .rectangle(rect):
+            try container.encode(Kind.rectangle, forKey: .type)
+            try container.encode(rect, forKey: .rect)
+        case let .censor(rect):
+            try container.encode(Kind.censor, forKey: .type)
+            try container.encode(rect, forKey: .rect)
+        case let .text(rect, string):
+            try container.encode(Kind.text, forKey: .type)
+            try container.encode(rect, forKey: .rect)
+            try container.encode(string, forKey: .string)
+        case let .pencil(points):
+            try container.encode(Kind.pencil, forKey: .type)
+            try container.encode(points, forKey: .points)
+        case let .number(center, radius, value):
+            try container.encode(Kind.number, forKey: .type)
+            try container.encode(center, forKey: .center)
+            try container.encode(radius, forKey: .radius)
+            try container.encode(value, forKey: .value)
+        case let .stamp(rect, emoji):
+            try container.encode(Kind.stamp, forKey: .type)
+            try container.encode(rect, forKey: .rect)
+            try container.encode(emoji, forKey: .emoji)
+        case let .highlight(points):
+            try container.encode(Kind.highlight, forKey: .type)
+            try container.encode(points, forKey: .points)
+        case let .measure(start, end, showsSize):
+            try container.encode(Kind.measure, forKey: .type)
+            try container.encode(start, forKey: .start)
+            try container.encode(end, forKey: .end)
+            try container.encode(showsSize, forKey: .showsSize)
+        case let .spotlight(rect, shape):
+            try container.encode(Kind.spotlight, forKey: .type)
+            try container.encode(rect, forKey: .rect)
+            try container.encode(shape, forKey: .shape)
+        }
     }
 }
 
