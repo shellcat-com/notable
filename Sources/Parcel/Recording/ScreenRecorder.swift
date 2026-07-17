@@ -47,7 +47,9 @@ final class ScreenRecorder: NSObject, ObservableObject {
         do {
             content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         } catch {
-            if !ScreenRecordingPermission.isGranted { throw RecorderError.permissionDenied }
+            if !(await ScreenRecordingPermission.hasEffectiveAccess()) {
+                throw RecorderError.permissionDenied
+            }
             throw error
         }
         guard let display = preferredDisplay(in: content) else { throw RecorderError.noDisplay }

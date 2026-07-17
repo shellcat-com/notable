@@ -41,6 +41,13 @@ enum ScreenRecordingPermission {
         }
     }
 
+    /// Best-effort permission probe for UI and preflight checks. Preflight is fast but can lag
+    /// behind the actual ScreenCaptureKit grant; the capture API probe is the fallback.
+    static func hasEffectiveAccess() async -> Bool {
+        if isGranted { return true }
+        return await canUseCaptureAPI()
+    }
+
     /// Deep-link to the Screen Recording pane in System Settings.
     static func openSystemSettings() {
         let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"

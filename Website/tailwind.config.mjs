@@ -14,22 +14,8 @@ export default {
         fuchsia: '#ec4899',
       },
       fontFamily: {
-        sans: ['"SF Pro Display"', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['"SF Mono"', 'ui-monospace', 'monospace'],
-      },
-      animation: {
-        aurora: 'aurora 18s ease-in-out infinite alternate',
-        float: 'float 6s ease-in-out infinite',
-      },
-      keyframes: {
-        aurora: {
-          '0%': { transform: 'translate(-8%, -6%) scale(1.05)' },
-          '100%': { transform: 'translate(8%, 6%) scale(1.15)' },
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-8px)' },
-        },
+        sans: ['Inter', '"SF Pro Display"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"SF Mono"', 'ui-monospace', 'monospace'],
       },
     },
   },

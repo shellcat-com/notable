@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Website
+    url: https://parcel-zeta-silk.vercel.app
+    about: Marketing site, download, and guides
+  - name: Parable ecosystem
+    url: https://github.com/bswxyz/parable
+    about: UI components and templates from the same author
