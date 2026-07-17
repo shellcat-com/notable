@@ -1,3 +1,4 @@
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export function SectionHeader({
@@ -5,14 +6,22 @@ export function SectionHeader({
   title,
   subtitle,
   className,
+  align = "left",
 }: {
   kicker?: string;
-  title: string;
+  title: React.ReactNode;
   subtitle?: string;
   className?: string;
+  align?: "left" | "center";
 }) {
   return (
-    <div className={cn("max-w-2xl", className)}>
+    <div
+      className={cn(
+        "max-w-2xl",
+        align === "center" && "mx-auto text-center",
+        className
+      )}
+    >
       {kicker && (
         <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
           {kicker}
@@ -22,7 +31,7 @@ export function SectionHeader({
         {title}
       </h2>
       {subtitle && (
-        <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+        <p className="mt-3 text-base leading-relaxed text-foreground/80">
           {subtitle}
         </p>
       )}
@@ -42,9 +51,9 @@ export function Badge({
       className={cn(
         "inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-wide",
         variant === "violet" &&
-          "border-violet-500/30 bg-violet-500/10 text-violet-300",
+          "border-[var(--brand-secondary)]/30 bg-[var(--brand-secondary)]/10 text-violet-300",
         variant === "mint" &&
-          "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+          "border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]",
         variant === "default" && "border-border bg-muted/50 text-muted-foreground"
       )}
     >

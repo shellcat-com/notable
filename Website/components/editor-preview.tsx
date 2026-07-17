@@ -89,9 +89,10 @@ const TOOL_CHIPS = [
   { label: "Select", icon: MousePointer2 },
   { label: "Arrow", icon: MoveUpRight },
   { label: "Rect", icon: Square },
+  { label: "Ellipse", icon: Square },
   { label: "Text", icon: Type },
   { label: "Censor", icon: EyeOff },
-  { label: "Beautify", icon: Sparkles },
+  { label: "Spotlight", icon: Sparkles },
   { label: "Loupe", icon: Search },
 ] as const;
 

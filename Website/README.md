@@ -13,7 +13,38 @@ Same stack as [Parable](https://github.com/bswxyz/parable): Next.js App Router, 
 | Fonts | Geist Sans, Geist Mono, Instrument Serif |
 | Theme | next-themes (dark default) |
 
-Visual components (`DitherAurora`, `ShimmerButton`, `VelocityMarquee`) are adapted from the Parable registry.
+## Brand colors
+
+Edit **`lib/theme.ts`** — one file controls accent, secondary, aurora gradient, and backgrounds site-wide:
+
+```ts
+export const theme = {
+  accent: "#5ee4b5",    // mint — CTAs, glow
+  secondary: "#8b5cf6", // violet — icons, links
+  tertiary: "#ec4899",  // fuchsia — gradient stops
+  ink: "#070708",       // hero/footer background
+  aurora: ["#8b5cf6", "#5ee4b5", "#ec4899"],
+};
+```
+
+Variables are injected on `<html>` in `app/layout.tsx` as `--brand-*` CSS custom properties.
+
+
+## Pages
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Marketing landing — hero, features, workflow, install, FAQ |
+| `/docs` | User documentation index |
+| `/docs/getting-started` | Install & first Capture |
+| `/docs/capture` | Freeze-then-select, scroll stitch |
+| `/docs/editor` | Tools, Layers, Beautify, export |
+| `/docs/recording` | MP4, trim, GIF |
+| `/docs/shortcuts` | Keyboard reference |
+| `/docs/privacy` | On-device Vision, permissions |
+| `/docs/supabase` | Optional upload setup |
+
+Contributor architecture docs remain in the repo [`docs/`](../docs/) folder.
 
 ## Develop
 
@@ -47,6 +78,7 @@ Static output lands in `out/` — deployed to [parcel.parable.dev](https://parce
 | `public/downloads/Parcel.zip` | macOS app download |
 | `public/appcast.xml` | Sparkle update feed |
 | `public/og.svg` | Open Graph image |
+| `public/assets/hero-marketing.png` | Higgsfield-generated marketing visual |
 | `public/favicon.svg` | Favicon |
 
 Release builds copy `build/Parcel.zip` → `public/downloads/Parcel.zip` via `Scripts/release.sh`.
