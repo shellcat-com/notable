@@ -9,7 +9,7 @@
 </p>
 
 <p>
-  <a href="https://parcel-zeta-silk.vercel.app"><img alt="Live site" src="https://img.shields.io/badge/live_site-parcel.parable.dev-8b5cf6?style=flat-square&labelColor=1a1a1a"></a>
+  <a href="https://parcel.parable.dev"><img alt="Live site" src="https://img.shields.io/badge/live_site-parcel.parable.dev-8b5cf6?style=flat-square&labelColor=1a1a1a"></a>
   <img alt="macOS 13+" src="https://img.shields.io/badge/macOS-13%2B-000?style=flat-square&logo=apple&logoColor=white&labelColor=1a1a1a">
   <img alt="14 tools" src="https://img.shields.io/badge/tools-14-ec4899?style=flat-square&labelColor=1a1a1a">
   <img alt="0 cloud AI" src="https://img.shields.io/badge/cloud_AI-0-5ee4b5?style=flat-square&labelColor=1a1a1a">
@@ -17,9 +17,9 @@
 </p>
 
 <p>
-  <a href="https://parcel-zeta-silk.vercel.app"><b>Website</b></a>
+  <a href="https://parcel.parable.dev"><b>Website</b></a>
   &nbsp;·&nbsp;
-  <a href="https://parcel-zeta-silk.vercel.app/downloads/Parcel.zip"><b>Download</b></a>
+  <a href="https://parcel.parable.dev/downloads/Parcel.zip"><b>Download</b></a>
   &nbsp;·&nbsp;
   <a href="docs/README.md">Docs</a>
   &nbsp;·&nbsp;
@@ -28,7 +28,7 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
-<a href="https://parcel-zeta-silk.vercel.app">
+<a href="https://parcel.parable.dev">
   <img src=".github/assets/hero.svg" alt="Parcel — Capture, mark up, and ship" width="100%">
 </a>
 
@@ -40,10 +40,10 @@
 
 | | |
 |---|---|
-| **🖥️ Native, not a web wrapper** | SwiftUI + ScreenCaptureKit + AppKit where structurally required. Menu bar app with a global hotkey — no Electron, no dock icon clutter. |
-| **🔒 Private by default** | OCR, face detection, translation, and regex redaction use Apple on-device frameworks only. Upload is optional Supabase Storage you configure yourself. |
-| **🎯 On screen = saved** | One render pipeline drives the Editor display and export. What you see in Beautify and Adjustments is exactly what copies or saves. |
-| **⚡ Built for daily work** | Freeze-then-select Capture, window snap, scroll stitch, MP4 recording, re-editable history, configurable hotkeys, and Sparkle updates. |
+| **Native, not a web wrapper** | SwiftUI + ScreenCaptureKit + AppKit where structurally required. Menu bar app with a global hotkey — no Electron, no dock icon clutter. |
+| **Private by default** | OCR, face detection, translation, and regex redaction use Apple on-device frameworks only. Upload is optional Supabase Storage you configure yourself. |
+| **On screen = saved** | One render pipeline drives the Editor display and export. What you see in Beautify and Adjustments is exactly what copies or saves. |
+| **Built for daily work** | Freeze-then-select Capture, window snap, scroll stitch, MP4 recording, re-editable history, configurable hotkeys, and Sparkle updates. |
 
 <br>
 
@@ -116,7 +116,7 @@ Sources/Parcel/
   Vision/        On-device OCR, faces, QR, translation
   Upload/        Supabase Storage REST client
   Hotkeys/       Carbon global hotkey + Preferences
-Website/         Astro marketing site (parcel.parable.dev)
+Website/         Next.js marketing site (parcel.parable.dev)
 docs/            Architecture, parity, QA, integrations
 Scripts/         release.sh, generate_icons.sh
 Casks/           Homebrew cask (parcel.rb)
@@ -146,7 +146,10 @@ The `.xcodeproj` is **generated** from [`project.yml`](project.yml) — run `xco
   <img alt="ScreenCaptureKit" src="https://img.shields.io/badge/ScreenCaptureKit-native-000?style=flat-square&logo=apple&logoColor=white&labelColor=1a1a1a">
   <img alt="Vision" src="https://img.shields.io/badge/Vision-on--device-000?style=flat-square&logo=apple&logoColor=white&labelColor=1a1a1a">
   <img alt="Core Image" src="https://img.shields.io/badge/Core_Image-adjustments-000?style=flat-square&logo=apple&logoColor=white&labelColor=1a1a1a">
-  <img alt="Astro" src="https://img.shields.io/badge/Astro-website-BC52EE?style=flat-square&logo=astro&logoColor=white">
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-000?style=flat-square&logo=next.js&logoColor=white&labelColor=1a1a1a">
+  <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black">
+  <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind-v4-38B2AC?style=flat-square&logo=tailwindcss&logoColor=white">
+  <img alt="Motion" src="https://img.shields.io/badge/Motion-animations-8b5cf6?style=flat-square&labelColor=1a1a1a">
   <img alt="Sparkle" src="https://img.shields.io/badge/Sparkle-updates-000?style=flat-square&labelColor=1a1a1a">
 </p>
 
@@ -167,5 +170,5 @@ Parcel is released under the [MIT License](LICENSE) — free and open. Built by 
 <br>
 
 <div align="center">
-  <sub>Part of the Parable ecosystem · <a href="https://github.com/bswxyz/parable">Parable components & templates</a> · <a href="https://parcel-zeta-silk.vercel.app">parcel.parable.dev</a></sub>
+  <sub>Part of the Parable ecosystem · <a href="https://github.com/bswxyz/parable">Parable components & templates</a> · <a href="https://parcel.parable.dev">parcel.parable.dev</a></sub>
 </div>

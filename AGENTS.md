@@ -63,7 +63,7 @@ Adjustments and Beautify are document-level settings, out of the stack, with pan
 **Still not implemented (v1.1+):** WebP/AVIF codecs, cloud history sync, analytics, cross-device
 handoff, capture templates, iOS/iPadOS companion, App Store submission.
 
-**Release infra:** `Scripts/release.sh`, GitHub Actions, Astro site at `Website/`, Sparkle appcast
+**Release infra:** `Scripts/release.sh`, GitHub Actions, Next.js site at `Website/`, Sparkle appcast
 at `Website/public/appcast.xml`. Manual QA matrix: `docs/QA_CHECKLIST.md`.
 
 ---
@@ -128,7 +128,7 @@ Sources/Parcel/
   Support/      Extensions, AppIdentity
   Resources/    Info.plist, Parcel.entitlements, PrivacyInfo.xcprivacy, Assets.xcassets
 Scripts/        release.sh, generate_icons.sh, ExportOptions.plist
-Website/        Astro marketing site + appcast.xml
+Website/         Next.js marketing site (parcel.parable.dev)
 docs/           QA_CHECKLIST.md, MACOS13_VM_QA.md
 ```
 

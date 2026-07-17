@@ -24,7 +24,7 @@ Set repository **About → Website** to `https://parcel.parable.dev`.
 
 1. Import `bswxyz/notable` in Vercel.
 2. Set **Root Directory** to `Website`.
-3. Framework preset: **Astro** (or use `vercel.json`).
+3. Framework preset: **Next.js** (auto-detected; static export to `out/`).
 4. Custom domain: `parcel.parable.dev`.
 
 ## Supabase

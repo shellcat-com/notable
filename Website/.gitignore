@@ -1,4 +1,6 @@
 node_modules
-dist
-.astro
+.next
+out
 .DS_Store
+*.tsbuildinfo
+next-env.d.ts
