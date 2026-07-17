@@ -1,15 +1,20 @@
-name: Notable
+name: Parcel
 options:
-  bundleIdPrefix: io.notable
+  bundleIdPrefix: dev.parable
   deploymentTarget:
     macOS: "13.0"
   createIntermediateGroups: true
   groupSortPosition: top
   generateEmptyDirectories: true
 
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.6.4"
+
 settings:
   base:
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
@@ -20,24 +25,39 @@ settings:
     CLANG_ENABLE_OBJC_ARC: YES
 
 targets:
-  Notable:
+  Parcel:
     type: application
     platform: macOS
     deploymentTarget: "13.0"
     sources:
-      - path: Sources/Notable
+      - path: Sources/Parcel
         excludes:
           - "Resources/Info.plist"
-          - "Resources/Notable.entitlements"
+          - "Resources/Parcel.entitlements"
+    dependencies:
+      - package: Sparkle
+        product: Sparkle
     settings:
       base:
-        PRODUCT_NAME: Notable
-        PRODUCT_BUNDLE_IDENTIFIER: io.notable.Notable
-        INFOPLIST_FILE: Sources/Notable/Resources/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Sources/Notable/Resources/Notable.entitlements
+        PRODUCT_NAME: Parcel
+        PRODUCT_BUNDLE_IDENTIFIER: dev.parable.Parcel
+        INFOPLIST_FILE: Sources/Parcel/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/Parcel/Resources/Parcel.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         COMBINE_HIDPI_IMAGES: YES
         ENABLE_HARDENED_RUNTIME: YES
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
+        OTHER_LDFLAGS:
+          - "-framework Sparkle"
+
+schemes:
+  Parcel:
+    build:
+      targets:
+        Parcel: all
+    run:
+      config: Debug
+    archive:
+      config: Release

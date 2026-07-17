@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Parcel</title>
+    <link>https://parcel.parable.dev</link>
+    <description>Parcel for macOS release feed</description>
+    <language>en</language>
+    <item>
+      <title>1.0.0</title>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <pubDate>Fri, 17 Jul 2026 18:00:00 +0000</pubDate>
+      <enclosure
+        url="https://parcel.parable.dev/downloads/Parcel.zip"
+        sparkle:os="macos"
+        length="0"
+        type="application/octet-stream"
+        sparkle:edSignature="REPLACE_AFTER_FIRST_RELEASE" />
+      <description><![CDATA[
+        <h2>Parcel 1.0.0</h2>
+        <ul>
+          <li>Initial public release — Capture, annotate, record, Vision, history, and optional Supabase upload.</li>
+          <li>Rebranded from the Notable codename to Parcel (Parable ecosystem).</li>
+        </ul>
+      ]]></description>
+    </item>
+  </channel>
+</rss>
