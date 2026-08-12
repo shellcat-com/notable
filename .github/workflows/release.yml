@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: macos-15
@@ -14,14 +17,82 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Import Developer ID signing certificate
+        env:
+          DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 }}
+          DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64:-}" ]]; then
+            echo "Missing DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 secret." >&2
+            exit 1
+          fi
+          if [[ -z "${DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD:-}" ]]; then
+            echo "Missing DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD secret." >&2
+            exit 1
+          fi
+
+          KEYCHAIN_PASSWORD="${KEYCHAIN_PASSWORD:-$(uuidgen)}"
+          CERTIFICATE_PATH="$RUNNER_TEMP/developer-id-application.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/parcel-signing.keychain-db"
+          trap 'rm -f "$CERTIFICATE_PATH"' EXIT
+
+          echo -n "$DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" \
+            -P "$DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
       - name: Build, export, notarize
         env:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          UPDATE_APPCAST: "1"
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          SPARKLE_KEYCHAIN_ACCOUNT: ${{ secrets.SPARKLE_KEYCHAIN_ACCOUNT }}
+          PARCEL_SCREEN_RECORDING_VERIFIED: ${{ secrets.PARCEL_SCREEN_RECORDING_VERIFIED }}
+          PARCEL_SECOND_DISPLAY_VERIFIED: ${{ secrets.PARCEL_SECOND_DISPLAY_VERIFIED }}
+          PARCEL_SUPABASE_URL: ${{ secrets.PARCEL_SUPABASE_URL }}
+          PARCEL_SUPABASE_ANON_KEY: ${{ secrets.PARCEL_SUPABASE_ANON_KEY }}
+          PARCEL_SUPABASE_BUCKET: ${{ secrets.PARCEL_SUPABASE_BUCKET }}
+          PARCEL_MACOS13_VM_VERIFIED: ${{ secrets.PARCEL_MACOS13_VM_VERIFIED }}
         run: |
-          chmod +x Scripts/release.sh
+          chmod +x Scripts/*.sh
           ./Scripts/release.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: Website/package-lock.json
+
+      - name: Build website
+        working-directory: Website
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+
+      - name: Verify website export artifact
+        run: bash Scripts/verify-website-export-artifact.sh
+
+      - name: Upload website artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-dist
+          path: Website/out
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -29,14 +100,6 @@ jobs:
           files: build/Parcel.zip
           generate_release_notes: true
 
-      - name: Build website
-        working-directory: Website
-        run: |
-          npm ci
-          npm run build
-
-      - name: Upload website artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: website-dist
-          path: Website/out
+      - name: Delete signing keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/parcel-signing.keychain-db" || true

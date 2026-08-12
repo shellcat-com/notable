@@ -4,7 +4,10 @@ import AppKit
 /// Sits above normal windows (`.screenSaver` level) and can become key so it receives the drag.
 final class OverlayWindow: NSPanel {
 
-    init(screen: NSScreen) {
+    let displayID: CGDirectDisplayID
+
+    init(screen: NSScreen, displayID: CGDirectDisplayID) {
+        self.displayID = displayID
         super.init(
             contentRect: screen.frame,
             styleMask: [.borderless, .nonactivatingPanel],

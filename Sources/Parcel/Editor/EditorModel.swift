@@ -13,7 +13,7 @@ import UniformTypeIdentifiers
 @MainActor
 final class EditorModel: ObservableObject {
 
-    let capture: Capture
+    @Published private(set) var capture: Capture
 
     // MARK: Annotation state
 
@@ -51,8 +51,10 @@ final class EditorModel: ObservableObject {
     @Published private(set) var blurredImage: CGImage
     @Published private(set) var pixelatedImage: CGImage
 
-    private let adjuster: CaptureAdjuster
+    private var adjuster: CaptureAdjuster
     private var censorSourcesReady = false
+    /// Custom color swatches persisted across Editor sessions.
+    @Published var savedColors: [RGBAColor] = ColorSwatchStore.load()
     /// The Adjustments the published images currently reflect (display can lag `adjustments`
     /// by the render debounce; export syncs the two).
     private var displayedAdjustments: Adjustments = .neutral
@@ -77,7 +79,7 @@ final class EditorModel: ObservableObject {
     @Published private(set) var isUploading = false
     @Published var statusMessage: String?
 
-    // MARK: Translation (on-device, macOS 15+)
+    // MARK: Translation (on-device, macOS 26+)
 
     @Published private(set) var translatedText: String?
     @Published private(set) var isTranslating = false
@@ -524,7 +526,7 @@ final class EditorModel: ObservableObject {
             if let result, !result.isEmpty {
                 statusMessage = "Translation ready — copy from Vision panel."
             } else if !TranslationService.isAvailable {
-                statusMessage = "On-device translation requires macOS 15 or later."
+                statusMessage = "On-device translation requires macOS 26 or later."
             }
         }
     }
@@ -567,6 +569,129 @@ final class EditorModel: ObservableObject {
         ensureCensorSourcesReady()
     }
 
+    // MARK: Capture transforms (document-level, undoable as annotation snapshots)
+
+    func cropCapture(toPoints rect: CGRect) {
+        let oldSize = capture.pointSize
+        guard let next = CaptureTransform.crop(capture, toPoints: rect) else { return }
+        pushUndo()
+        annotations = CaptureTransform.cropAnnotations(annotations, by: rect)
+        replaceCapture(next, remappedFrom: oldSize)
+    }
+
+    func resizeCapture(toPointSize size: CGSize) {
+        let oldSize = capture.pointSize
+        guard let next = CaptureTransform.resize(capture, toPointSize: size) else { return }
+        pushUndo()
+        annotations = CaptureTransform.scaleAnnotations(annotations, from: oldSize, to: size)
+        replaceCapture(next, remappedFrom: oldSize)
+    }
+
+    func rotateCapture90CW() {
+        let oldSize = capture.pointSize
+        guard let next = CaptureTransform.rotate90CW(capture) else { return }
+        pushUndo()
+        annotations = CaptureTransform.rotateAnnotations90CW(annotations, canvasSize: oldSize)
+        replaceCapture(next, remappedFrom: oldSize)
+    }
+
+    func flipCaptureHorizontal() {
+        let oldSize = capture.pointSize
+        guard let next = CaptureTransform.flipHorizontal(capture) else { return }
+        pushUndo()
+        annotations = CaptureTransform.flipAnnotationsH(annotations, canvasWidth: oldSize.width)
+        replaceCapture(next, remappedFrom: oldSize)
+    }
+
+    func flipCaptureVertical() {
+        let oldSize = capture.pointSize
+        guard let next = CaptureTransform.flipVertical(capture) else { return }
+        pushUndo()
+        annotations = CaptureTransform.flipAnnotationsV(annotations, canvasHeight: oldSize.height)
+        replaceCapture(next, remappedFrom: oldSize)
+    }
+
+    func expandCanvas(top: CGFloat, left: CGFloat, bottom: CGFloat, right: CGFloat, fill: NSColor = .white) {
+        let oldSize = capture.pointSize
+        guard let next = CaptureTransform.expand(
+            capture, top: top, left: left, bottom: bottom, right: right, fill: fill
+        ) else { return }
+        pushUndo()
+        annotations = CaptureTransform.offsetAnnotations(
+            annotations,
+            by: CGPoint(x: left, y: top)
+        )
+        replaceCapture(next, remappedFrom: oldSize)
+    }
+
+    func combineCapture(_ other: Capture, into rect: CGRect) {
+        let oldSize = capture.pointSize
+        guard let next = CaptureTransform.combine(base: capture, other: other, into: rect) else { return }
+        pushUndo()
+        replaceCapture(next, remappedFrom: oldSize)
+    }
+
+    func removeOpaqueBackground(tolerance: CGFloat = 28) {
+        let oldSize = capture.pointSize
+        guard let next = CaptureTransform.removeBackground(capture, tolerance: tolerance) else { return }
+        pushUndo()
+        replaceCapture(next, remappedFrom: oldSize)
+    }
+
+    /// Snaps highlighter stroke endpoints toward nearby OCR word boxes (on-device Vision).
+    func smartSnapHighlighter(_ points: [CGPoint]) -> [CGPoint] {
+        HighlighterSnapper.snappedPoints(points, to: visionAnalysis.text.map(\.rect))
+    }
+
+    func saveCurrentColorSwatch() {
+        ColorSwatchStore.add(toolColor)
+        savedColors = ColorSwatchStore.load()
+    }
+
+    func printCapture() {
+        guard let image = renderedNSImage() else { return }
+        CapturePrintPayload.printOperation(for: image).run()
+    }
+
+    func shareCapture() {
+        guard let image = renderedNSImage() else { return }
+        let picker = CaptureSharePayload.picker(for: image)
+        if let anchor = CaptureSharePayload.anchor(in: NSApp.keyWindow) {
+            picker.show(relativeTo: anchor.rect, of: anchor.view, preferredEdge: anchor.preferredEdge)
+        }
+    }
+
+    func saveParcelProject() {
+        endEditingText()
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [UTType(filenameExtension: "parcel") ?? .data]
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = CaptureFileName.make(extension: "parcel")
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            ParcelProjectIO.save(model: self, to: url)
+        }
+    }
+
+    private func replaceCapture(_ next: Capture, remappedFrom _: CGSize) {
+        capture = next
+        adjuster = CaptureAdjuster(capture: next)
+        censorSourcesReady = annotations.contains {
+            if case .censor = $0.kind { return true }
+            return false
+        }
+        displayedAdjustments = .neutral
+        adjustments = adjustments // trigger refresh path
+        let adjusted = adjuster.makeAdjusted(adjustments)
+        adjustedImage = adjusted
+        baseImage = NSImage(cgImage: adjusted, size: next.pointSize)
+        blurredImage = censorSourcesReady ? adjuster.makeBlurred(adjustments) : adjusted
+        pixelatedImage = censorSourcesReady ? adjuster.makePixelated(adjustments) : adjusted
+        displayedAdjustments = adjustments
+        _pixelSampler = nil
+        objectWillChange.send()
+    }
+
     // MARK: Output
 
     func copyToClipboard() {
@@ -581,7 +706,7 @@ final class EditorModel: ObservableObject {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [outputFormat.contentType]
         panel.canCreateDirectories = true
-        panel.nameFieldStringValue = Self.defaultFileName(format: outputFormat)
+        panel.nameFieldStringValue = CaptureFileName.make(extension: outputFormat.fileExtension)
         if let dir = Self.lastSaveDirectory { panel.directoryURL = dir }
 
         panel.begin { [weak self] response in
@@ -609,7 +734,7 @@ final class EditorModel: ObservableObject {
 
         isUploading = true
         statusMessage = "Uploading…"
-        let fileName = Self.defaultFileName(format: .png)
+        let fileName = CaptureFileName.make(extension: "png")
         Task { [weak self] in
             do {
                 let url = try await UploadService.uploadPNG(data: data, fileName: fileName)
@@ -687,30 +812,18 @@ final class EditorModel: ObservableObject {
     }
 
     private func writeImage(to url: URL) {
-        guard let cgImage = renderedCGImage() else {
+        guard var cgImage = renderedCGImage() else {
             NSLog("Parcel: failed to render Capture for save")
             return
         }
-        let data: Data?
-        if outputFormat == .heic {
-            let destinationData = NSMutableData()
-            guard let destination = CGImageDestinationCreateWithData(
-                destinationData, outputFormat.contentType.identifier as CFString, 1, nil
-            ) else {
-                NSLog("Parcel: failed to create HEIC destination")
-                return
-            }
-            CGImageDestinationAddImage(destination, cgImage, nil)
-            data = CGImageDestinationFinalize(destination) ? destinationData as Data : nil
-        } else if let bitmapType = outputFormat.bitmapType {
-            let rep = NSBitmapImageRep(cgImage: cgImage)
-            rep.size = effectiveSettings.outerSize(for: pointSize)
-            var properties: [NSBitmapImageRep.PropertyKey: Any] = [:]
-            if outputFormat == .jpeg { properties[.compressionFactor] = 0.92 }
-            data = rep.representation(using: bitmapType, properties: properties)
-        } else {
-            data = nil
+        if CapturePreferences.convertToSRGB {
+            cgImage = ImageColorSpace.convertToSRGB(cgImage) ?? cgImage
         }
+        let data = Self.encodeImage(
+            cgImage,
+            as: outputFormat,
+            outputSize: effectiveSettings.outerSize(for: pointSize)
+        )
         guard let data else {
             NSLog("Parcel: failed to encode \(outputFormat.label)")
             return
@@ -719,6 +832,30 @@ final class EditorModel: ObservableObject {
             try data.write(to: url)
         } catch {
             NSLog("Parcel: failed to write Capture — \(error)")
+        }
+    }
+
+    static func encodeImage(_ cgImage: CGImage, as outputFormat: OutputFormat, outputSize: CGSize) -> Data? {
+        if outputFormat == .webp {
+            return ParcelWebPEncoder.encode(cgImage)
+        } else if outputFormat.usesImageIO {
+            let destinationData = NSMutableData()
+            guard let destination = CGImageDestinationCreateWithData(
+                destinationData, outputFormat.contentType.identifier as CFString, 1, nil
+            ) else {
+                NSLog("Parcel: failed to create \(outputFormat.label) destination")
+                return nil
+            }
+            CGImageDestinationAddImage(destination, cgImage, nil)
+            return CGImageDestinationFinalize(destination) ? destinationData as Data : nil
+        } else if let bitmapType = outputFormat.bitmapType {
+            let rep = NSBitmapImageRep(cgImage: cgImage)
+            rep.size = outputSize
+            var properties: [NSBitmapImageRep.PropertyKey: Any] = [:]
+            if outputFormat == .jpeg { properties[.compressionFactor] = 0.92 }
+            return rep.representation(using: bitmapType, properties: properties)
+        } else {
+            return nil
         }
     }
 
@@ -751,9 +888,62 @@ final class EditorModel: ObservableObject {
         set { UserDefaults.standard.set(newValue?.path, forKey: lastSaveDirectoryKey) }
     }
 
-    private static func defaultFileName(format: OutputFormat) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
-        return "Parcel \(formatter.string(from: Date())).\(format.fileExtension)"
+}
+
+enum HighlighterSnapper {
+    static func snappedPoints(_ points: [CGPoint], to boxes: [CGRect], threshold: CGFloat = 24) -> [CGPoint] {
+        guard !boxes.isEmpty else { return points }
+        return points.map { point in
+            let nearest = boxes.min {
+                hypot($0.midX - point.x, $0.midY - point.y) < hypot($1.midX - point.x, $1.midY - point.y)
+            }
+            guard let box = nearest,
+                  hypot(box.midX - point.x, box.midY - point.y) < threshold
+            else { return point }
+            return CGPoint(x: box.midX, y: box.midY)
+        }
+    }
+}
+
+// MARK: - Color swatches
+
+enum ColorSwatchStore {
+    private static let key = "\(AppIdentity.defaultsPrefix).editor.colorSwatches"
+
+    static func load() -> [RGBAColor] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let colors = try? JSONDecoder().decode([RGBAColor].self, from: data)
+        else { return [] }
+        return colors
+    }
+
+    static func add(_ color: RGBAColor) {
+        var colors = load()
+        if !colors.contains(color) {
+            colors.insert(color, at: 0)
+            if colors.count > 12 { colors = Array(colors.prefix(12)) }
+            if let data = try? JSONEncoder().encode(colors) {
+                UserDefaults.standard.set(data, forKey: key)
+            }
+        }
+    }
+}
+
+// MARK: - sRGB conversion
+
+enum ImageColorSpace {
+    static func convertToSRGB(_ image: CGImage) -> CGImage? {
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: nil,
+            width: image.width,
+            height: image.height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: srgb,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return context.makeImage()
     }
 }

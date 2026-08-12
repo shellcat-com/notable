@@ -8,30 +8,41 @@ final class OverlayController {
 
     var onSelection: ((SelectionResult) -> Void)?
     var onScrollSelection: ((SelectionResult) -> Void)?
+    var onOCRSelection: ((SelectionResult) -> Void)?
+    var onRecordingSelection: ((SelectionResult) -> Void)?
     var onCancel: (() -> Void)?
 
     private let screens: [FrozenScreen]
+    private let initialMode: OverlayCaptureMode
     private var windows: [OverlayWindow] = []
     private var keyMonitor: Any?
     private var finished = false
 
-    init(screens: [FrozenScreen]) {
+    init(screens: [FrozenScreen], initialMode: OverlayCaptureMode = .region) {
         self.screens = screens
+        self.initialMode = initialMode
     }
 
     func present() {
         NSApp.activate(ignoringOtherApps: true)
 
         for frozen in screens {
-            let window = OverlayWindow(screen: frozen.screen)
+            let window = OverlayWindow(screen: frozen.screen, displayID: frozen.id)
             let root = SelectionOverlayView(
                 frozen: frozen,
                 onCommit: { [weak self] rect in
-                    self?.commit(SelectionResult(screen: frozen, rectInPoints: rect), scroll: false)
+                    self?.commit(SelectionResult(screen: frozen, rectInPoints: rect), kind: .region)
                 },
-                onScrollCommit: onScrollSelection == nil ? nil : { [weak self] rect in
-                    self?.commit(SelectionResult(screen: frozen, rectInPoints: rect), scroll: true)
-                }
+                onScrollCommit: { [weak self] rect in
+                    self?.commit(SelectionResult(screen: frozen, rectInPoints: rect), kind: .scroll)
+                },
+                onOCRCommit: { [weak self] rect in
+                    self?.commit(SelectionResult(screen: frozen, rectInPoints: rect), kind: .ocr)
+                },
+                onRecordCommit: { [weak self] rect in
+                    self?.commit(SelectionResult(screen: frozen, rectInPoints: rect), kind: .record)
+                },
+                initialMode: initialMode
             )
             let hosting = NSHostingView(rootView: root)
             hosting.frame = window.contentLayoutRect
@@ -49,6 +60,15 @@ final class OverlayController {
                 self.cancel()
                 return nil
             }
+            if event.keyCode == 48, !event.modifierFlags.contains(.shift) { // Tab
+                if let window = self.windows.first(where: \.isKeyWindow) ?? self.windows.first {
+                    NotificationCenter.default.post(
+                        name: .overlayTabPressed,
+                        object: window.displayID
+                    )
+                }
+                return nil
+            }
             return event
         }
     }
@@ -59,12 +79,19 @@ final class OverlayController {
 
     // MARK: Private
 
-    private func commit(_ result: SelectionResult, scroll: Bool) {
+    private enum CommitKind { case region, scroll, ocr, record }
+
+    private func commit(_ result: SelectionResult, kind: CommitKind) {
         guard !finished else { return }
         finished = true
-        if scroll {
+        switch kind {
+        case .scroll:
             onScrollSelection?(result)
-        } else {
+        case .ocr:
+            onOCRSelection?(result)
+        case .record:
+            onRecordingSelection?(result)
+        case .region:
             onSelection?(result)
         }
     }

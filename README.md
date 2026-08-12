@@ -9,7 +9,7 @@
 </p>
 
 <p>
-  <a href="https://parcel.parable.dev"><img alt="Live site" src="https://img.shields.io/badge/live_site-parcel.parable.dev-8b5cf6?style=flat-square&labelColor=1a1a1a"></a>
+  <a href="https://parcel-zeta-silk.vercel.app"><img alt="Live site" src="https://img.shields.io/badge/live_site-parcel--zeta--silk.vercel.app-8b5cf6?style=flat-square&labelColor=1a1a1a"></a>
   <img alt="macOS 13+" src="https://img.shields.io/badge/macOS-13%2B-000?style=flat-square&logo=apple&logoColor=white&labelColor=1a1a1a">
   <img alt="14 tools" src="https://img.shields.io/badge/tools-14-ec4899?style=flat-square&labelColor=1a1a1a">
   <img alt="0 cloud AI" src="https://img.shields.io/badge/cloud_AI-0-5ee4b5?style=flat-square&labelColor=1a1a1a">
@@ -17,9 +17,9 @@
 </p>
 
 <p>
-  <a href="https://parcel.parable.dev"><b>Website</b></a>
+  <a href="https://parcel-zeta-silk.vercel.app"><b>Website</b></a>
   &nbsp;·&nbsp;
-  <a href="https://parcel.parable.dev/downloads/Parcel.zip"><b>Download</b></a>
+  <a href="https://parcel-zeta-silk.vercel.app/downloads/Parcel.zip"><b>Download</b></a>
   &nbsp;·&nbsp;
   <a href="docs/README.md">Docs</a>
   &nbsp;·&nbsp;
@@ -28,7 +28,7 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
-<a href="https://parcel.parable.dev">
+<a href="https://parcel-zeta-silk.vercel.app">
   <img src=".github/assets/hero.svg" alt="Parcel — Capture, mark up, and ship" width="100%">
 </a>
 
@@ -95,12 +95,16 @@ Signed, notarized builds via [`Scripts/release.sh`](Scripts/release.sh):
 
 ```sh
 DEVELOPMENT_TEAM=XXXXXXXXXX \
-APPLE_ID=you@example.com \
-APPLE_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx \
+NOTARYTOOL_PROFILE=parcel-release \
+UPDATE_APPCAST=1 \
 ./Scripts/release.sh
 ```
 
-Set `SKIP_NOTARIZE=1` for unsigned local Release builds. Tag `v*` triggers [`.github/workflows/release.yml`](.github/workflows/release.yml).
+Use `APPLE_ID` + `APPLE_APP_PASSWORD` instead of `NOTARYTOOL_PROFILE` if preferred. Run
+[`Scripts/verify-release-gates.sh`](Scripts/verify-release-gates.sh) before release and
+[`Scripts/verify-release.sh`](Scripts/verify-release.sh) after packaging. Set `SKIP_NOTARIZE=1`
+for unsigned local Release builds. See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md)
+for the full public ZIP runbook. Tag `v*` triggers [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
 <br>
 
@@ -116,7 +120,7 @@ Sources/Parcel/
   Vision/        On-device OCR, faces, QR, translation
   Upload/        Supabase Storage REST client
   Hotkeys/       Carbon global hotkey + Preferences
-Website/         Next.js marketing site (parcel.parable.dev)
+Website/         Next.js marketing site (parcel-zeta-silk.vercel.app)
 docs/            Architecture, parity, QA, integrations
 Scripts/         release.sh, generate_icons.sh
 Casks/           Homebrew cask (parcel.rb)
@@ -170,5 +174,5 @@ Parcel is released under the [MIT License](LICENSE) — free and open. Built by 
 <br>
 
 <div align="center">
-  <sub>Part of the Parable ecosystem · <a href="https://github.com/bswxyz/parable">Parable components & templates</a> · <a href="https://parcel.parable.dev">parcel.parable.dev</a></sub>
+  <sub>Part of the Parable ecosystem · <a href="https://github.com/bswxyz/parable">Parable components & templates</a> · <a href="https://parcel-zeta-silk.vercel.app">parcel-zeta-silk.vercel.app</a></sub>
 </div>

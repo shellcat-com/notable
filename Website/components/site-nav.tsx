@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { DOWNLOAD_URL, GITHUB_URL } from "@/lib/site";
-import { ShimmerButton } from "@/components/parable/shimmer-button";
+import { navLinks } from "@/lib/nav";
 
 function GithubMark() {
   return (
@@ -16,64 +17,112 @@ function GithubMark() {
   );
 }
 
-const LINKS = [
-  { href: "#features", label: "Features" },
-  { href: "#workflow", label: "Workflow" },
-  { href: "#privacy", label: "Privacy" },
-  { href: "#guides", label: "Guides" },
-  { href: "#faq", label: "FAQ" },
-];
+const LINKS = navLinks;
+
+function ParcelMark({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "relative grid size-7 shrink-0 place-items-center overflow-hidden rounded-lg ring-1 ring-white/10",
+        className
+      )}
+    >
+      <span className="absolute inset-0 bg-gradient-to-br from-[var(--brand-secondary)] via-[var(--brand-tertiary)]/70 to-[var(--brand-accent)]/60" />
+      <span className="relative text-[11px] font-black text-white">P</span>
+    </span>
+  );
+}
 
 export function SiteNav() {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [scrolled, setScrolled] = React.useState(false);
+  const isHome = pathname === "/";
+  const onHero = isHome && !scrolled;
+
+  React.useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 text-xs font-black text-black">
-            P
-          </span>
-          <span className="text-sm font-semibold tracking-tight">Parcel</span>
+    <header className="sticky top-0 z-50 px-4 pt-3">
+      <div
+        className={cn(
+          "mx-auto flex h-12 max-w-6xl items-center gap-3 rounded-2xl border px-3 transition-all duration-300",
+          scrolled || !isHome
+            ? "border-border/50 bg-background/80 shadow-[0_8px_32px_rgba(0,0,0,0.12)] backdrop-blur-xl"
+            : "border-white/10 bg-black/35 shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+        )}
+      >
+        <Link href="/" className="flex items-center gap-2.5">
+          <ParcelMark />
+          <span className={cn("text-sm font-semibold tracking-tight", onHero && "text-white")}>Parcel</span>
         </Link>
 
-        <nav className="ml-2 hidden items-center gap-1 md:flex">
-          {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {l.label}
-            </a>
-          ))}
+        <nav className="ml-1 hidden items-center lg:flex">
+          {LINKS.map((l) =>
+            "isRoute" in l && l.isRoute ? (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm transition-colors",
+                  onHero ? "text-zinc-400 hover:text-white" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {l.label}
+              </Link>
+            ) : (
+              <a
+                key={l.href}
+                href={l.href}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm transition-colors",
+                  onHero ? "text-zinc-400 hover:text-white" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {l.label}
+              </a>
+            )
+          )}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle />
+        <div className="ml-auto flex items-center gap-1.5">
+          <ThemeToggle onHero={onHero} />
           <a
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="GitHub"
-            className="hidden size-9 items-center justify-center rounded-lg border text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
+            className={cn(
+              "hidden size-8 items-center justify-center rounded-lg border transition-colors sm:inline-flex",
+              onHero
+                ? "border-white/15 text-zinc-400 hover:text-white"
+                : "border-border/60 text-muted-foreground hover:text-foreground"
+            )}
           >
             <GithubMark />
           </a>
-          <ShimmerButton
-            as="a"
+          <a
             href={DOWNLOAD_URL}
-            className="hidden px-4 py-2 text-xs sm:inline-flex"
-            shimmerColor="#a78bfa"
+            download
+            className="hidden items-center justify-center rounded-full bg-[var(--brand-accent)] px-4 py-2 text-xs font-semibold text-[var(--brand-ink)] transition-all hover:brightness-110 sm:inline-flex"
           >
             Download
-          </ShimmerButton>
+          </a>
           <button
             onClick={() => setMobileOpen((o) => !o)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
-            aria-controls="mobile-nav"
-            className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-colors hover:text-foreground md:hidden"
+            className={cn(
+              "inline-flex size-8 items-center justify-center rounded-lg border lg:hidden",
+              onHero
+                ? "border-white/15 text-zinc-300"
+                : "border-border/60 text-muted-foreground"
+            )}
           >
             {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
@@ -81,25 +130,32 @@ export function SiteNav() {
       </div>
 
       {mobileOpen && (
-        <nav
-          id="mobile-nav"
-          aria-label="Primary"
-          className="border-t border-border/60 px-4 py-3 md:hidden"
-        >
-          {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              onClick={() => setMobileOpen(false)}
-              className="block rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
-            >
-              {l.label}
-            </a>
-          ))}
+        <nav className="mx-auto mt-2 max-w-6xl rounded-2xl border border-border/60 bg-background/95 p-3 backdrop-blur-xl lg:hidden">
+          {LINKS.map((l) =>
+            "isRoute" in l && l.isRoute ? (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setMobileOpen(false)}
+                className="block rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/50"
+              >
+                {l.label}
+              </Link>
+            ) : (
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={() => setMobileOpen(false)}
+                className="block rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/50"
+              >
+                {l.label}
+              </a>
+            )
+          )}
           <a
             href={DOWNLOAD_URL}
             download
-            className="mt-2 block rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-center text-sm font-medium text-white"
+            className="mt-2 block rounded-xl bg-[var(--brand-accent)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--brand-ink)]"
           >
             Download for macOS
           </a>
@@ -109,23 +165,35 @@ export function SiteNav() {
   );
 }
 
-function ThemeToggle() {
+function ThemeToggle({ onHero = false }: { onHero?: boolean }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = React.useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false
+  );
+
+  if (!mounted) {
+    return <span aria-hidden className="inline-block size-8" />;
+  }
+
   const dark = resolvedTheme === "dark";
 
   return (
     <button
+      type="button"
       onClick={() => setTheme(dark ? "light" : "dark")}
       aria-label="Toggle theme"
-      className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {mounted && dark ? (
-        <Sun className="size-4" />
-      ) : (
-        <Moon className="size-4" />
+      className={cn(
+        "inline-flex size-8 items-center justify-center rounded-lg border transition-colors",
+        onHero
+          ? "border-white/15 text-zinc-300 hover:text-white"
+          : "border-border/60 text-muted-foreground hover:text-foreground"
       )}
+    >
+      {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </button>
   );
 }
+
+export { ParcelMark };

@@ -16,6 +16,9 @@ struct EditorCanvasView: View {
     @State private var lastClick: (time: Date, point: CGPoint)?
     @State private var hoverLocation: CGPoint? // canvas-local view points, same space as the drag
     @State private var rotationDragStartAngle: CGFloat = 0
+    @State private var shiftHeld = false
+    @State private var spaceHeld = false
+    @State private var draftRepositionAnchor: CGPoint?
     @FocusState private var textFocused: Bool
 
     private enum DragOp {
@@ -99,6 +102,15 @@ struct EditorCanvasView: View {
                     model.selectedID = nil
                 }
             }
+            .background(
+                ModifierKeyTracker(
+                    onShiftChange: { shiftHeld = $0 },
+                    onSpaceChange: { held in
+                        spaceHeld = held
+                        if !held { draftRepositionAnchor = nil }
+                    }
+                )
+            )
         }
     }
 
@@ -220,7 +232,16 @@ struct EditorCanvasView: View {
         if case .none = op { beginOp(at: start, scale: scale) }
         switch op {
         case .creating:
-            updateDraft(start: start, current: current)
+            if spaceHeld {
+                if let anchor = draftRepositionAnchor {
+                    let delta = CGPoint(x: current.x - anchor.x, y: current.y - anchor.y)
+                    translateDraft(by: delta)
+                }
+                draftRepositionAnchor = current
+            } else {
+                draftRepositionAnchor = nil
+                updateDraft(start: start, current: constrainedEnd(start: start, end: current))
+            }
         case let .moving(_, original):
             model.updateSelected(kind: original.translated(dx: current.x - start.x, dy: current.y - start.y))
         case let .resizing(_, handle, original):
@@ -240,7 +261,7 @@ struct EditorCanvasView: View {
 
         switch op {
         case .creating:
-            finalizeDraft(start: start, current: current)
+            finalizeDraft(start: start, current: constrainedEnd(start: start, end: current))
         case let .moving(before, _):
             model.commitInteractive(before: before)
         case let .resizing(before, _, _):
@@ -362,6 +383,39 @@ struct EditorCanvasView: View {
         self.draft = draft
     }
 
+    private func translateDraft(by delta: CGPoint) {
+        guard var draft else { return }
+        draft.kind = draft.kind.translated(dx: delta.x, dy: delta.y)
+        self.draft = draft
+    }
+
+    private func constrainedEnd(start: CGPoint, end: CGPoint) -> CGPoint {
+        guard shiftHeld else { return end }
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        switch model.activeTool {
+        case .arrow, .measure:
+            let length = hypot(dx, dy)
+            guard length > 0 else { return end }
+            let angle = atan2(dy, dx)
+            let snap = (angle / (.pi / 4)).rounded() * (.pi / 4)
+            return CGPoint(x: start.x + cos(snap) * length, y: start.y + sin(snap) * length)
+        case .rectangle, .ellipse, .censor, .spotlight, .stamp:
+            let side = max(abs(dx), abs(dy))
+            return CGPoint(
+                x: start.x + (dx >= 0 ? side : -side),
+                y: start.y + (dy >= 0 ? side : -side)
+            )
+        case .pencil, .highlighter:
+            if abs(dx) >= abs(dy) {
+                return CGPoint(x: end.x, y: start.y)
+            }
+            return CGPoint(x: start.x, y: end.y)
+        case .select, .text, .number, .loupe, .eyedropper:
+            return end
+        }
+    }
+
     private func finalizeDraft(start: CGPoint, current: CGPoint) {
         guard let draft else { return }
         defer { self.draft = nil }
@@ -395,7 +449,11 @@ struct EditorCanvasView: View {
             }
             model.add(annotation)
         case .highlighter:
-            if case let .highlight(points) = draft.kind, points.count >= 2 { model.add(draft) }
+            if case let .highlight(points) = draft.kind, points.count >= 2 {
+                var snapped = draft
+                snapped.kind = .highlight(points: model.smartSnapHighlighter(points))
+                model.add(snapped)
+            }
         case .measure:
             if case let .measure(s, e, _) = draft.kind, s.distance(to: e) >= 4 { model.add(draft) }
         case .spotlight:

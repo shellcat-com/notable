@@ -70,14 +70,14 @@ enum VisionAnalyzer {
                 VisionFaceObservation(rect: captureRect(fromVision: $0.boundingBox, pointSize: pointSize))
             }
             let qrCodes = (barcodeRequest.results ?? []).compactMap { observation -> VisionQRCode? in
-                guard observation.symbology == .QR, let payload = observation.payloadStringValue else { return nil }
+                guard observation.symbology == .qr, let payload = observation.payloadStringValue else { return nil }
                 return VisionQRCode(payload: payload)
             }
             return VisionAnalysis(text: text, faces: faces, qrCodes: qrCodes)
         }.value
     }
 
-    private static func captureRect(fromVision rect: CGRect, pointSize: CGSize) -> CGRect {
+    static func captureRect(fromVision rect: CGRect, pointSize: CGSize) -> CGRect {
         CGRect(
             x: rect.minX * pointSize.width,
             y: (1 - rect.maxY) * pointSize.height,

@@ -11,6 +11,9 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     from: "2.6.4"
+  LibWebP:
+    url: https://github.com/the-swift-collective/libwebp.git
+    from: "1.4.0"
 
 settings:
   base:
@@ -18,6 +21,7 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "-"
     DEVELOPMENT_TEAM: ""
     ENABLE_HARDENED_RUNTIME: YES
     DEAD_CODE_STRIPPING: YES
@@ -34,9 +38,12 @@ targets:
         excludes:
           - "Resources/Info.plist"
           - "Resources/Parcel.entitlements"
+          - "Resources/Parcel.Debug.entitlements"
     dependencies:
       - package: Sparkle
         product: Sparkle
+      - package: LibWebP
+        product: WebP
     settings:
       base:
         PRODUCT_NAME: Parcel
@@ -51,6 +58,53 @@ targets:
           - "@executable_path/../Frameworks"
         OTHER_LDFLAGS:
           - "-framework Sparkle"
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: Sources/Parcel/Resources/Parcel.Debug.entitlements
+          CODE_SIGN_IDENTITY: "-"
+          DEVELOPMENT_TEAM: ""
+          ENABLE_HARDENED_RUNTIME: NO
+        Release:
+          CODE_SIGN_ENTITLEMENTS: Sources/Parcel/Resources/Parcel.entitlements
+          ENABLE_HARDENED_RUNTIME: YES
+          # Prevent Xcode from injecting get-task-allow into Release (breaks distribution).
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+
+  ParcelUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: Tests/ParcelUITests
+    dependencies:
+      - target: Parcel
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.parable.ParcelUITests
+        TEST_TARGET_NAME: Parcel
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: QFH99B6X5V
+        ENABLE_HARDENED_RUNTIME: NO
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+  ParcelTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: Tests/ParcelTests
+    dependencies:
+      - target: Parcel
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.parable.ParcelTests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: NO
 
 schemes:
   Parcel:
@@ -59,5 +113,19 @@ schemes:
         Parcel: all
     run:
       config: Debug
+    test:
+      targets:
+        - ParcelTests
+        - ParcelUITests
     archive:
       config: Release
+  ParcelUnit:
+    build:
+      targets:
+        Parcel: all
+        ParcelTests: test
+    run:
+      config: Debug
+    test:
+      targets:
+        - ParcelTests

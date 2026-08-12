@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// The Editor's SwiftUI surface: a two-row Tool/style toolbar over the interactive Canvas.
@@ -66,6 +67,8 @@ struct EditorView: View {
                 .fill(model.activeTool == tool ? Color.accentColor.opacity(0.22) : .clear)
         )
         .foregroundStyle(model.activeTool == tool ? Color.accentColor : Color.primary)
+        .accessibilityLabel(tool.label)
+        .accessibilityIdentifier("tool-\(tool.rawValue)")
         .help(tool.label)
     }
 
@@ -80,17 +83,28 @@ struct EditorView: View {
                 Image(systemName: model.displayArrowStyle.symbol)
             }
             .menuStyle(.borderlessButton)
-            .frame(width: 46)
+            .frame(width: 48, height: 28)
+            .accessibilityLabel("Arrow style")
+            .accessibilityValue(model.displayArrowStyle.label)
+            .accessibilityIdentifier("arrow-style-menu")
             .help("Arrow style")
         }
 
         if showsCensorControls {
             Picker("", selection: censorModeBinding) {
-                ForEach(CensorMode.allCases) { mode in Image(systemName: mode.symbol).tag(mode) }
+                ForEach(CensorMode.allCases) { mode in
+                    Label(mode.label, systemImage: mode.symbol)
+                        .labelStyle(.iconOnly)
+                        .tag(mode)
+                        .accessibilityLabel(mode.label)
+                }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 142)
+            .frame(width: 164)
+            .accessibilityLabel("Censor mode")
+            .accessibilityValue(model.displayCensorMode.label)
+            .accessibilityIdentifier("censor-mode-picker")
             .help("Censor mode")
         }
 
@@ -149,6 +163,27 @@ struct EditorView: View {
             ColorPicker("", selection: colorBinding, supportsOpacity: false)
                 .labelsHidden()
                 .help("Color")
+
+            if !model.savedColors.isEmpty {
+                ForEach(Array(model.savedColors.prefix(6).enumerated()), id: \.offset) { _, swatch in
+                    Button {
+                        model.toolColor = swatch
+                    } label: {
+                        Circle()
+                            .fill(swatch.color)
+                            .frame(width: 14, height: 14)
+                            .overlay(Circle().strokeBorder(Color.primary.opacity(0.2), lineWidth: 0.5))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Button {
+                model.saveCurrentColorSwatch()
+            } label: {
+                Image(systemName: "plus.circle")
+            }
+            .buttonStyle(.borderless)
+            .help("Save color swatch")
 
             HStack(spacing: 4) {
                 Image(systemName: "lineweight").foregroundStyle(.secondary).font(.system(size: 11))
@@ -255,6 +290,46 @@ struct EditorView: View {
 
     private var output: some View {
         HStack(spacing: 8) {
+            Menu {
+                Button("Crop to Selection Bounds") {
+                    if let selected = model.selectedAnnotation {
+                        model.cropCapture(toPoints: selected.kind.boundingBox.insetBy(dx: -4, dy: -4))
+                    }
+                }
+                .disabled(model.selectedID == nil)
+                Button("Resize to 50%") {
+                    let size = model.pointSize
+                    model.resizeCapture(toPointSize: CGSize(width: size.width * 0.5, height: size.height * 0.5))
+                }
+                Button("Rotate 90°") { model.rotateCapture90CW() }
+                Button("Flip Horizontal") { model.flipCaptureHorizontal() }
+                Button("Flip Vertical") { model.flipCaptureVertical() }
+                Button("Expand Canvas +40pt") {
+                    model.expandCanvas(top: 40, left: 40, bottom: 40, right: 40)
+                }
+                Button("Remove Backdrop") {
+                    model.removeOpaqueBackground()
+                }
+                Divider()
+                Button("Combine from Clipboard…") {
+                    guard let image = NSImage(pasteboard: NSPasteboard.general),
+                          let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+                    else { return }
+                    let other = Capture(image: cg, scale: model.capture.scale)
+                    let rect = CGRect(
+                        x: model.pointSize.width * 0.1,
+                        y: model.pointSize.height * 0.1,
+                        width: model.pointSize.width * 0.35,
+                        height: model.pointSize.height * 0.35
+                    )
+                    model.combineCapture(other, into: rect)
+                }
+            } label: {
+                Image(systemName: "crop.rotate")
+            }
+            .menuStyle(.borderlessButton)
+            .help("Capture transforms")
+
             Button {
                 model.copyToClipboard()
             } label: {
@@ -278,6 +353,10 @@ struct EditorView: View {
                 Text(model.outputFormat.label)
             }
             .menuStyle(.borderlessButton)
+            .frame(minWidth: 56)
+            .accessibilityLabel("Output format")
+            .accessibilityValue(model.outputFormat.label)
+            .accessibilityIdentifier("output-format-menu")
             .help("Output format")
 
             Button {
@@ -286,6 +365,28 @@ struct EditorView: View {
                 Label("Save…", systemImage: "square.and.arrow.down")
             }
             .keyboardShortcut("s", modifiers: .command)
+
+            Button {
+                model.saveParcelProject()
+            } label: {
+                Image(systemName: "doc.badge.gearshape")
+            }
+            .help("Save editable .parcel project")
+
+            Button {
+                model.printCapture()
+            } label: {
+                Image(systemName: "printer")
+            }
+            .keyboardShortcut("p", modifiers: .command)
+            .help("Print")
+
+            Button {
+                model.shareCapture()
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+            }
+            .help("Share")
 
             Button {
                 model.uploadCapture()

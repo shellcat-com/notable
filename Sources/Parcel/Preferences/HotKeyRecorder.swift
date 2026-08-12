@@ -42,7 +42,13 @@ struct HotKeyRecorder: View {
             if flags.contains(.option) { carbonMods |= UInt32(optionKey) }
             if flags.contains(.shift) { carbonMods |= UInt32(shiftKey) }
             if flags.contains(.command) { carbonMods |= UInt32(cmdKey) }
-            keyCode = UInt32(event.keyCode)
+            let code = UInt32(event.keyCode)
+            // Reject bare ⌘W / ⌘Q / ⌘, — they collide with Close / Quit / Preferences.
+            if HotKeyPreferences.isReservedSystemShortcut(keyCode: code, modifiers: carbonMods) {
+                NSSound.beep()
+                return nil
+            }
+            keyCode = code
             modifiers = carbonMods
             HotKeyPreferences.keyCode = keyCode
             HotKeyPreferences.modifiers = modifiers

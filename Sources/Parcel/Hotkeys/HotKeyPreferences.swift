@@ -1,10 +1,17 @@
 import Carbon.HIToolbox
 import Foundation
 
-/// Persisted global Capture hotkey. Defaults to ⌘⇧2.
+/// Persisted global Capture hotkeys. Primary default: ⌘⇧2.
 enum HotKeyPreferences {
     private static let keyCodeKey = "\(AppIdentity.defaultsPrefix).hotkey.keyCode"
     private static let modifiersKey = "\(AppIdentity.defaultsPrefix).hotkey.modifiers"
+
+    struct Binding {
+        let action: HotKeyManager.Action
+        let keyCode: UInt32
+        let modifiers: UInt32
+        let isEnabled: Bool
+    }
 
     static var keyCode: UInt32 {
         get {
@@ -28,9 +35,99 @@ enum HotKeyPreferences {
         HotKeyDisplay.string(keyCode: keyCode, modifiers: modifiers)
     }
 
+    /// Extra Capture Area & … shortcuts registered alongside the primary Capture shortcut.
+    static var extraBindings: [Binding] {
+        [
+            Binding(
+                action: .captureCopy,
+                keyCode: UInt32(stored("copy.keyCode", default: kVK_ANSI_C)),
+                modifiers: UInt32(stored("copy.modifiers", default: Int(cmdKey | shiftKey | optionKey))),
+                isEnabled: bool("copy.enabled", default: true)
+            ),
+            Binding(
+                action: .captureAnnotate,
+                keyCode: UInt32(stored("annotate.keyCode", default: kVK_ANSI_A)),
+                modifiers: UInt32(stored("annotate.modifiers", default: Int(cmdKey | shiftKey | optionKey))),
+                isEnabled: bool("annotate.enabled", default: true)
+            ),
+            Binding(
+                action: .capturePin,
+                keyCode: UInt32(stored("pin.keyCode", default: kVK_ANSI_P)),
+                modifiers: UInt32(stored("pin.modifiers", default: Int(cmdKey | shiftKey | optionKey))),
+                isEnabled: bool("pin.enabled", default: true)
+            ),
+            Binding(
+                action: .captureSave,
+                keyCode: UInt32(stored("save.keyCode", default: kVK_ANSI_S)),
+                modifiers: UInt32(stored("save.modifiers", default: Int(cmdKey | shiftKey | optionKey))),
+                isEnabled: bool("save.enabled", default: false)
+            ),
+            Binding(
+                action: .capturePrevious,
+                keyCode: UInt32(stored("previous.keyCode", default: kVK_ANSI_5)),
+                modifiers: UInt32(stored("previous.modifiers", default: Int(cmdKey | shiftKey))),
+                isEnabled: bool("previous.enabled", default: true)
+            ),
+            Binding(
+                action: .openClipboard,
+                keyCode: UInt32(stored("clipboard.keyCode", default: kVK_ANSI_V)),
+                modifiers: UInt32(stored("clipboard.modifiers", default: Int(cmdKey | shiftKey | optionKey))),
+                isEnabled: bool("clipboard.enabled", default: false)
+            ),
+            Binding(
+                action: .restoreClosed,
+                keyCode: UInt32(stored("restore.keyCode", default: kVK_ANSI_Z)),
+                modifiers: UInt32(stored("restore.modifiers", default: Int(cmdKey | shiftKey | optionKey))),
+                isEnabled: bool("restore.enabled", default: true)
+            ),
+            Binding(
+                action: .hideOverlays,
+                keyCode: UInt32(stored("hide.keyCode", default: kVK_ANSI_H)),
+                modifiers: UInt32(stored("hide.modifiers", default: Int(cmdKey | shiftKey | optionKey))),
+                isEnabled: bool("hide.enabled", default: true)
+            ),
+            Binding(
+                action: .annotateLast,
+                keyCode: UInt32(stored("last.keyCode", default: kVK_ANSI_E)),
+                modifiers: UInt32(stored("last.modifiers", default: Int(cmdKey | shiftKey | optionKey))),
+                isEnabled: bool("last.enabled", default: false)
+            ),
+            Binding(
+                action: .ocr,
+                keyCode: UInt32(stored("ocr.keyCode", default: kVK_ANSI_T)),
+                modifiers: UInt32(stored("ocr.modifiers", default: Int(cmdKey | shiftKey | optionKey))),
+                isEnabled: bool("ocr.enabled", default: false)
+            ),
+        ]
+    }
+
     static func resetToDefault() {
         keyCode = UInt32(kVK_ANSI_2)
         modifiers = UInt32(cmdKey | shiftKey)
+    }
+
+    /// Shortcuts that would steal macOS window / app chrome if rebound as Capture.
+    static func isReservedSystemShortcut(keyCode: UInt32, modifiers: UInt32) -> Bool {
+        let mods = modifiers & UInt32(cmdKey | shiftKey | optionKey | controlKey)
+        guard mods == UInt32(cmdKey) else { return false }
+        switch Int(keyCode) {
+        case kVK_ANSI_W, kVK_ANSI_Q, kVK_ANSI_H, kVK_ANSI_M, kVK_ANSI_Comma:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private static func stored(_ suffix: String, default defaultValue: Int) -> Int {
+        let key = "\(AppIdentity.defaultsPrefix).hotkey.\(suffix)"
+        if UserDefaults.standard.object(forKey: key) == nil { return defaultValue }
+        return UserDefaults.standard.integer(forKey: key)
+    }
+
+    private static func bool(_ suffix: String, default defaultValue: Bool) -> Bool {
+        let key = "\(AppIdentity.defaultsPrefix).hotkey.\(suffix)"
+        if UserDefaults.standard.object(forKey: key) == nil { return defaultValue }
+        return UserDefaults.standard.bool(forKey: key)
     }
 }
 

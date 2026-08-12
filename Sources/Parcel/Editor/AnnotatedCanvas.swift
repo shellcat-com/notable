@@ -209,7 +209,7 @@ struct AnnotatedCanvas: View {
             context.fill(Path(rect), with: .color(style.color.color))
         case .erase:
             if let cg = base.cgImage(forProposedRect: nil, context: nil, hints: nil),
-               let fill = CensorEraseSampler.averageBorderColor(in: rect, image: cg) {
+               let fill = CensorEraseSampler.averageSurroundingColor(in: rect, image: cg, pointSize: pointSize) {
                 context.fill(Path(rect), with: .color(fill.color))
             } else {
                 context.fill(Path(rect), with: .color(style.color.color))
