@@ -12,7 +12,7 @@ enum TranslationService {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         guard #available(macOS 26.0, *) else { return nil }
 
-        #if canImport(Translation)
+        #if canImport(Translation) && compiler(>=6.2)
         guard let source = detectLanguage(text) else { return nil }
         do {
             let session = TranslationSession(installedSource: source, target: target)
@@ -30,7 +30,7 @@ enum TranslationService {
 
     static var isAvailable: Bool {
         if #available(macOS 26.0, *) {
-            #if canImport(Translation)
+            #if canImport(Translation) && compiler(>=6.2)
             return true
             #endif
         }
