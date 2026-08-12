@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { Apple } from "lucide-react";
 import { DOWNLOAD_URL } from "@/lib/site";
 
@@ -24,13 +23,14 @@ export function MobileDownloadBar() {
       role="region"
       aria-label="Download Parcel"
     >
-      <Link
+      <a
         href={DOWNLOAD_URL}
+        download
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-accent)] py-3.5 text-sm font-semibold text-[var(--brand-ink)]"
       >
         <Apple className="size-4" />
         Download for macOS
-      </Link>
+      </a>
     </div>
   );
 }

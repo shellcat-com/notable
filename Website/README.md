@@ -34,7 +34,7 @@ Variables are injected on `<html>` in `app/layout.tsx` as `--brand-*` CSS custom
 
 | Route | Purpose |
 |-------|---------|
-| `/` | Marketing landing — hero, features, workflow, install, FAQ |
+| `/` | Product-led marketing landing — workflow, capabilities, privacy, download |
 | `/docs` | User documentation index |
 | `/docs/getting-started` | Install & first Capture |
 | `/docs/capture` | Freeze-then-select, scroll stitch |
@@ -78,7 +78,10 @@ Static output lands in `out/` — deployed to [parcel.parable.dev](https://parce
 | `public/downloads/Parcel.zip` | macOS app download |
 | `public/appcast.xml` | Sparkle update feed |
 | `public/og.svg` | Open Graph image |
-| `public/assets/hero-marketing.png` | Higgsfield-generated marketing visual |
+| `public/media/hero-workflow.mp4` | Silent staged Parcel workflow loop |
+| `public/media/hero-workflow-poster.webp` | Reduced-motion and preload fallback |
+| `public/media/workflow-*.webp` | Staged Overlay, Editor, and output campaign stills |
+| `public/assets/hero-marketing.png` | Legacy campaign visual, intentionally unused |
 | `public/favicon.svg` | Favicon |
 
 Release builds copy `build/Parcel.zip` → `public/downloads/Parcel.zip` via `Scripts/release.sh`.

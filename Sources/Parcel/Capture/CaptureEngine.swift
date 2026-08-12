@@ -111,16 +111,58 @@ final class CaptureEngine {
         pixelRect = pixelRect.intersection(bounds)
         guard pixelRect.width >= 1, pixelRect.height >= 1 else { return nil }
         guard let cropped = result.screen.image.cropping(to: pixelRect) else { return nil }
-        return Capture(image: cropped, scale: scale)
+        return applyRetinaPreference(Capture(image: cropped, scale: scale))
+    }
+
+    /// Optionally downscales a Retina Capture to 1× points for smaller shares.
+    func applyRetinaPreference(_ capture: Capture) -> Capture {
+        guard CapturePreferences.scaleDownRetina, capture.scale > 1 else { return capture }
+        let targetWidth = max(1, Int(capture.pointSize.width.rounded()))
+        let targetHeight = max(1, Int(capture.pointSize.height.rounded()))
+        guard let context = CGContext(
+            data: nil,
+            width: targetWidth,
+            height: targetHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return capture }
+        context.interpolationQuality = .high
+        context.draw(capture.image, in: CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
+        guard let scaled = context.makeImage() else { return capture }
+        return Capture(image: scaled, scale: 1)
     }
 
     /// Combines all frozen displays into one Capture in their actual desktop arrangement. Mixed
     /// density displays are normalized to the highest connected backing scale so no source image
     /// is upscaled below its Capture-point dimensions.
     func makeStitchedCapture(from screens: [FrozenScreen]) -> Capture? {
-        guard !screens.isEmpty else { return nil }
-        let desktop = screens.map { $0.screen.frame }.reduce(screens[0].screen.frame) { $0.union($1) }
-        let scale = screens.map(\.scale).max() ?? 1
+        AllDisplayStitcher.stitch(
+            screens.map { screen in
+                AllDisplayStitcher.Item(
+                    frame: screen.screen.frame,
+                    image: screen.image,
+                    scale: screen.scale
+                )
+            },
+            scaleDownRetina: CapturePreferences.scaleDownRetina
+        )
+    }
+}
+
+enum AllDisplayStitcher {
+    struct Item {
+        let frame: CGRect
+        let image: CGImage
+        let scale: CGFloat
+    }
+
+    /// Composes displays in desktop coordinates into one top-left Capture space.
+    static func stitch(_ items: [Item], scaleDownRetina: Bool) -> Capture? {
+        guard !items.isEmpty else { return nil }
+        let desktop = items.map(\.frame).reduce(items[0].frame) { $0.union($1) }
+        let scale = items.map(\.scale).max() ?? 1
         let width = Int((desktop.width * scale).rounded(.up))
         let height = Int((desktop.height * scale).rounded(.up))
         guard width > 0, height > 0,
@@ -140,8 +182,8 @@ final class CaptureEngine {
         context.translateBy(x: 0, y: CGFloat(height))
         context.scaleBy(x: scale, y: -scale)
 
-        for frozen in screens {
-            let frame = frozen.screen.frame
+        for item in items {
+            let frame = item.frame
             let rect = CGRect(
                 x: frame.minX - desktop.minX,
                 y: desktop.maxY - frame.maxY,
@@ -149,10 +191,30 @@ final class CaptureEngine {
                 height: frame.height
             )
             context.interpolationQuality = .high
-            context.draw(frozen.image, in: rect)
+            context.draw(item.image, in: rect)
         }
         guard let image = context.makeImage() else { return nil }
-        return Capture(image: image, scale: scale)
+        let capture = Capture(image: image, scale: scale)
+        guard scaleDownRetina, capture.scale > 1 else { return capture }
+        return downscaleRetinaCapture(capture)
+    }
+
+    private static func downscaleRetinaCapture(_ capture: Capture) -> Capture {
+        let targetWidth = max(1, Int(capture.pointSize.width.rounded()))
+        let targetHeight = max(1, Int(capture.pointSize.height.rounded()))
+        guard let context = CGContext(
+            data: nil,
+            width: targetWidth,
+            height: targetHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return capture }
+        context.interpolationQuality = .high
+        context.draw(capture.image, in: CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
+        guard let scaled = context.makeImage() else { return capture }
+        return Capture(image: scaled, scale: 1)
     }
 }
 

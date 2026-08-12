@@ -20,17 +20,42 @@ jobs:
       - name: Resolve packages
         run: xcodebuild -resolvePackageDependencies -project Parcel.xcodeproj -scheme Parcel
 
+      - name: Verify scripts
+        run: |
+          bash -n \
+            Scripts/release.sh \
+            Scripts/verify-release.sh \
+            Scripts/verify-release-gates.sh \
+            Scripts/update-appcast.sh \
+            Scripts/test-update-appcast.sh \
+            Scripts/test-real-sparkle-signing.sh \
+            Scripts/verify-sparkle-key-consistency.sh \
+            Scripts/verify-no-network-ai.sh \
+            Scripts/verify-workflows.sh \
+            Scripts/verify-website-export-artifact.sh \
+            Scripts/ship-status.sh \
+            Scripts/final-local-qa.sh
+
+      - name: Verify workflows
+        run: bash Scripts/verify-workflows.sh
+
+      - name: Verify no network AI
+        run: bash Scripts/verify-no-network-ai.sh
+
       - name: Build Debug
         run: |
           xcodebuild -project Parcel.xcodeproj -scheme Parcel -configuration Debug \
             -derivedDataPath .derivedData build \
             CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES
 
+      - name: Run unit tests
+        run: |
+          xcodebuild test -project Parcel.xcodeproj -scheme ParcelUnit -configuration Debug \
+            -derivedDataPath .derivedData-unit \
+            CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES
+
   build-website:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Website
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,4 +63,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: Website/package-lock.json
-      - run: npm ci && npm run build
+      - name: Build website
+        working-directory: Website
+        run: npm ci && npm run lint && npm run build
+      - name: Verify website export artifact
+        run: bash Scripts/verify-website-export-artifact.sh

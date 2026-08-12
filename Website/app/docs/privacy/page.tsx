@@ -19,7 +19,7 @@ export default function PrivacyDocPage() {
       <h2>What stays local</h2>
       <ul>
         <li>All Capture and recording pixels</li>
-        <li>Vision OCR, QR, face finding, and translation (macOS 15+/26+)</li>
+        <li>Vision OCR, QR, face finding, and translation (macOS 26+)</li>
         <li>Regex PII inspection and auto-redact suggestions</li>
         <li>Capture history documents on disk</li>
       </ul>

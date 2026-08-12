@@ -3,12 +3,18 @@ import CoreGraphics
 
 /// Samples surrounding Capture pixels to fill erase-mode Censors locally.
 enum CensorEraseSampler {
-    static func averageBorderColor(in rect: CGRect, image: CGImage) -> RGBAColor? {
-        let r = rect.standardized.integral
+    static func averageSurroundingColor(
+        in rect: CGRect,
+        image: CGImage,
+        pointSize: CGSize? = nil
+    ) -> RGBAColor? {
+        let r = rect.standardized
         guard r.width > 0, r.height > 0 else { return nil }
 
         let width = image.width
         let height = image.height
+        let pointSize = pointSize ?? CGSize(width: width, height: height)
+        guard pointSize.width > 0, pointSize.height > 0 else { return nil }
         guard let data = image.dataProvider?.data,
               let ptr = CFDataGetBytePtr(data) else { return nil }
 
@@ -31,19 +37,21 @@ enum CensorEraseSampler {
             count += 1
         }
 
-        let minX = max(0, Int(r.minX))
-        let maxX = min(width - 1, Int(r.maxX))
-        let minY = max(0, Int(r.minY))
-        let maxY = min(height - 1, Int(r.maxY))
-        guard minX <= maxX, minY <= maxY else { return nil }
+        let scaleX = CGFloat(width) / pointSize.width
+        let scaleY = CGFloat(height) / pointSize.height
+        let minX = Int(floor(r.minX * scaleX))
+        let maxX = Int(ceil(r.maxX * scaleX))
+        let minY = Int(floor(r.minY * scaleY))
+        let maxY = Int(ceil(r.maxY * scaleY))
+        guard minX < maxX, minY < maxY else { return nil }
 
-        for x in minX...maxX {
-            sample(x: x, y: minY)
-            if maxY != minY { sample(x: x, y: maxY) }
+        for x in (minX - 1)...maxX {
+            sample(x: x, y: minY - 1)
+            sample(x: x, y: maxY)
         }
-        for y in minY...maxY {
-            sample(x: minX, y: y)
-            if maxX != minX { sample(x: maxX, y: y) }
+        for y in minY..<maxY {
+            sample(x: minX - 1, y: y)
+            sample(x: maxX, y: y)
         }
 
         guard count > 0 else { return nil }

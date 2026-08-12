@@ -11,6 +11,16 @@ struct SnapWindow: Identifiable, Equatable {
     let frameInScreen: CGRect
 }
 
+enum SnapWindowPicker {
+    /// The frontmost detected window under a local point is represented by the
+    /// smallest containing frame, because ScreenCaptureKit gives us windows in display space.
+    static func frontmostWindow(at point: CGPoint, windows: [SnapWindow]) -> SnapWindow? {
+        windows
+            .filter { $0.frameInScreen.contains(point) }
+            .min { $0.frameInScreen.area < $1.frameInScreen.area }
+    }
+}
+
 /// A single display, captured full-resolution at hotkey time and frozen for selection.
 struct FrozenScreen: Identifiable {
     let id: CGDirectDisplayID
@@ -26,9 +36,7 @@ struct FrozenScreen: Identifiable {
 
     /// The frontmost (smallest containing) window under a local point, if any.
     func window(at point: CGPoint) -> SnapWindow? {
-        windows
-            .filter { $0.frameInScreen.contains(point) }
-            .min { $0.frameInScreen.area < $1.frameInScreen.area }
+        SnapWindowPicker.frontmostWindow(at: point, windows: windows)
     }
 }
 

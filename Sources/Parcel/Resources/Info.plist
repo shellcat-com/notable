@@ -30,6 +30,8 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Parcel can include microphone audio in screen recordings when you start a recording.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Parcel can show your webcam as a picture-in-picture overlay while recording your screen.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSHumanReadableCopyright</key>
@@ -37,6 +39,38 @@
 	<key>SUFeedURL</key>
 	<string>https://parcel.parable.dev/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>REPLACE_WITH_SPARKLE_EDDSA_PUBLIC_KEY</string>
+	<string>KzMPoJWvyEPSZnLcyE6AcaMU1HpBrLRZnP8xs5XdpHI=</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>dev.parable.Parcel</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>parcel</string>
+			</array>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>dev.parable.parcel-project</string>
+			<key>UTTypeDescription</key>
+			<string>Parcel Project</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.directory</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>parcel</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

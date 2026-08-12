@@ -37,6 +37,32 @@ enum AppIdentity {
         defaults.set(true, forKey: migrationCompletedKey)
     }
 
+    /// Debug/non-sandbox builds read host UserDefaults; copy keys from the sandbox container once.
+    static func migrateSandboxContainerDefaultsIfNeeded() {
+        let defaults = UserDefaults.standard
+        let containerPlist = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Containers/\(bundleIdentifier)/Data/Library/Preferences/\(bundleIdentifier).plist")
+        guard FileManager.default.fileExists(atPath: containerPlist.path),
+              let container = NSDictionary(contentsOf: containerPlist) as? [String: Any] else { return }
+
+        let keysToMigrate = [
+            "dev.parable.onboardingCompleted",
+            "\(defaultsPrefix).hotkey.keyCode",
+            "\(defaultsPrefix).hotkey.modifiers",
+            "\(defaultsPrefix).upload.supabaseURL",
+            "\(defaultsPrefix).upload.anonKey",
+            "\(defaultsPrefix).upload.bucket",
+            "\(defaultsPrefix).upload.publicBase",
+            "\(defaultsPrefix).recording.fps",
+            "\(defaultsPrefix).brandKits",
+        ]
+        for key in keysToMigrate {
+            if defaults.object(forKey: key) == nil, let value = container[key] {
+                defaults.set(value, forKey: key)
+            }
+        }
+    }
+
     private static func migrateHistoryDirectoryIfNeeded() {
         let fileManager = FileManager.default
         guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {

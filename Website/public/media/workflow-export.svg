@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Parcel polished export</title>
+  <desc id="desc">A staged Parcel export with a Beautify background, window chrome, output settings, and completed copy action.</desc>
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0e9ff"/><stop offset=".42" stop-color="#dffbf1"/><stop offset="1" stop-color="#ffe8f2"/></linearGradient>
+    <linearGradient id="beauty" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b5cf6"/><stop offset=".48" stop-color="#5ee4b5"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="30" stdDeviation="30" flood-color="#201a2e" flood-opacity=".28"/></filter>
+    <filter id="soft"><feGaussianBlur stdDeviation="36"/></filter>
+  </defs>
+  <rect width="1440" height="900" fill="url(#page)"/>
+  <circle cx="190" cy="130" r="250" fill="#8b5cf6" opacity=".18" filter="url(#soft)"/><circle cx="1260" cy="700" r="320" fill="#ec4899" opacity=".14" filter="url(#soft)"/>
+
+  <g transform="translate(92 106)" filter="url(#shadow)">
+    <rect width="924" height="666" rx="36" fill="url(#beauty)"/>
+    <circle cx="176" cy="116" r="160" fill="#ffffff" opacity=".1"/><circle cx="790" cy="560" r="220" fill="#0b0d12" opacity=".09"/>
+    <g transform="translate(92 84)">
+      <rect width="740" height="498" rx="25" fill="#15171b" opacity=".96"/>
+      <rect width="740" height="48" rx="25" fill="#24262b"/><rect y="27" width="740" height="21" fill="#24262b"/>
+      <circle cx="27" cy="24" r="7" fill="#ff5f57"/><circle cx="50" cy="24" r="7" fill="#febc2e"/><circle cx="73" cy="24" r="7" fill="#28c840"/>
+      <text x="102" y="30" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="650" fill="#d8d9de">Launch notes</text>
+      <rect x="28" y="78" width="684" height="382" rx="18" fill="#f8fafc"/>
+      <rect x="62" y="112" width="270" height="18" rx="9" fill="#1c2430" opacity=".86"/>
+      <rect x="62" y="149" width="522" height="11" rx="5" fill="#64748b" opacity=".38"/>
+      <rect x="62" y="178" width="446" height="11" rx="5" fill="#64748b" opacity=".28"/>
+      <rect x="62" y="226" width="268" height="184" rx="18" fill="#171d28"/>
+      <rect x="354" y="226" width="326" height="82" rx="18" fill="#e8eeec"/>
+      <rect x="354" y="328" width="326" height="82" rx="18" fill="#efe8f4"/>
+      <path d="M104 362 C152 278 222 344 286 256" stroke="#5ee4b5" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <rect x="398" y="249" width="210" height="34" rx="10" fill="none" stroke="#ff4d47" stroke-width="4"/>
+      <path d="M398 344 L548 382" stroke="#8b5cf6" stroke-width="7" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <g transform="translate(1058 152)" filter="url(#shadow)">
+    <rect width="290" height="532" rx="28" fill="#17181c" stroke="#ffffff" stroke-opacity=".12"/>
+    <text x="25" y="45" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="17" font-weight="700" fill="#f5f5f6">Output</text>
+    <text x="25" y="91" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="650" fill="#9699a2">FORMAT</text>
+    <rect x="24" y="106" width="242" height="50" rx="14" fill="#ffffff" opacity=".07"/><text x="45" y="138" font-family="ui-monospace,SFMono-Regular,monospace" font-size="14" fill="#e1e2e5">PNG</text><text x="227" y="138" font-family="ui-monospace,SFMono-Regular,monospace" font-size="14" fill="#a6a8af">2×</text>
+    <text x="25" y="202" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="650" fill="#9699a2">BEAUTIFY</text>
+    <rect x="24" y="216" width="242" height="78" rx="16" fill="url(#beauty)"/><text x="46" y="250" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="650" fill="#101215">Parable glow</text><text x="46" y="273" font-family="ui-monospace,SFMono-Regular,monospace" font-size="11" fill="#101215" opacity=".65">saved brand kit</text>
+    <rect x="24" y="316" width="242" height="50" rx="14" fill="#ffffff" opacity=".07"/><text x="45" y="347" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#d9dade">Copy Capture</text>
+    <rect x="24" y="378" width="242" height="50" rx="14" fill="#ffffff" opacity=".07"/><text x="45" y="409" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#d9dade">Save locally</text>
+    <rect x="24" y="440" width="242" height="62" rx="16" fill="#5ee4b5"/><text x="79" y="478" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" font-weight="750" fill="#07110e">Copy &amp; finish</text>
+  </g>
+
+  <g transform="translate(1020 714)" filter="url(#shadow)">
+    <rect width="330" height="80" rx="22" fill="#ffffff" opacity=".94"/>
+    <circle cx="42" cy="40" r="18" fill="#5ee4b5"/><path d="M34 40 l6 6 11-13" fill="none" stroke="#0a1713" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="72" y="34" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" font-weight="700" fill="#17191e">Capture copied</text>
+    <text x="72" y="56" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#6b7280">What you saw is what was saved.</text>
+  </g>
+</svg>

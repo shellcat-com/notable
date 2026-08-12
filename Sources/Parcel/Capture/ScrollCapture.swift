@@ -62,26 +62,39 @@ final class ScrollCaptureSession {
 /// Uses Vision for a likely translation, then validates the overlap directly against sampled
 /// pixels before compositing. Vision gets us to the right neighbourhood; pixel scoring rejects
 /// weak registrations on repeated or static page regions.
-private enum ScrollCaptureStitcher {
+enum ScrollCaptureStitcher {
 
     static func append(upper: CGImage, lower: CGImage) throws -> CGImage? {
-        guard upper.width == lower.width, upper.height == lower.height else { return nil }
-        let expected = visionExpectedOverlap(upper: upper, lower: lower)
-        guard let overlap = PixelOverlapFinder.bestOverlap(upper: upper, lower: lower, expected: expected) else {
+        // Prefer vertical stitch; fall back to horizontal for sideways scrolling content.
+        if upper.width == lower.width, upper.height == lower.height {
+            let expected = visionExpectedOverlap(upper: upper, lower: lower, horizontal: false)
+            if let overlap = PixelOverlapFinder.bestOverlap(upper: upper, lower: lower, expected: expected, horizontal: false) {
+                return verticallyStack(upper: upper, lower: lower, overlap: overlap)
+            }
+            let expectedH = visionExpectedOverlap(upper: upper, lower: lower, horizontal: true)
+            if let overlap = PixelOverlapFinder.bestOverlap(upper: upper, lower: lower, expected: expectedH, horizontal: true) {
+                return horizontallyStack(left: upper, right: lower, overlap: overlap)
+            }
             return nil
         }
-        return verticallyStack(upper: upper, lower: lower, overlap: overlap)
+        return nil
     }
 
-    private static func visionExpectedOverlap(upper: CGImage, lower: CGImage) -> Int? {
+    private static func visionExpectedOverlap(upper: CGImage, lower: CGImage, horizontal: Bool) -> Int? {
         let request = VNTranslationalImageRegistrationRequest(targetedCGImage: upper)
         let handler = VNImageRequestHandler(cgImage: lower, orientation: .up)
         do {
             try handler.perform([request])
             guard let transform = request.results?.first?.alignmentTransform else { return nil }
-            let shift = abs(Int(transform.ty.rounded()))
-            let overlap = lower.height - shift
-            return (16..<lower.height).contains(overlap) ? overlap : nil
+            if horizontal {
+                let shift = abs(Int(transform.tx.rounded()))
+                let overlap = lower.width - shift
+                return (16..<lower.width).contains(overlap) ? overlap : nil
+            } else {
+                let shift = abs(Int(transform.ty.rounded()))
+                let overlap = lower.height - shift
+                return (16..<lower.height).contains(overlap) ? overlap : nil
+            }
         } catch {
             return nil
         }
@@ -99,7 +112,6 @@ private enum ScrollCaptureStitcher {
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
-        // Match the Capture's top-left coordinate convention while drawing with Core Graphics.
         context.translateBy(x: 0, y: CGFloat(height))
         context.scaleBy(x: 1, y: -1)
         context.draw(upper, in: CGRect(x: 0, y: 0, width: width, height: upper.height))
@@ -109,18 +121,40 @@ private enum ScrollCaptureStitcher {
         )
         return context.makeImage()
     }
+
+    private static func horizontallyStack(left: CGImage, right: CGImage, overlap: Int) -> CGImage? {
+        let height = left.height
+        let width = left.width + right.width - overlap
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        context.translateBy(x: 0, y: CGFloat(height))
+        context.scaleBy(x: 1, y: -1)
+        context.draw(left, in: CGRect(x: 0, y: 0, width: left.width, height: height))
+        context.draw(
+            right,
+            in: CGRect(x: left.width - overlap, y: 0, width: right.width, height: height)
+        )
+        return context.makeImage()
+    }
 }
 
 private enum PixelOverlapFinder {
 
-    /// Finds the lower-frame top rows that best match the upper-frame bottom rows. A score below
-    /// 22 (mean absolute RGB difference on a 0…255 scale) is a conservative acceptance bound.
-    static func bestOverlap(upper: CGImage, lower: CGImage, expected: Int?) -> Int? {
+    /// Finds the best overlap for vertical or horizontal stitching.
+    static func bestOverlap(upper: CGImage, lower: CGImage, expected: Int?, horizontal: Bool) -> Int? {
         guard let a = PixelGrid(image: upper), let b = PixelGrid(image: lower),
               a.width == b.width, a.height == b.height else { return nil }
 
-        let minimum = max(24, a.height / 50)
-        let maximum = a.height - 4
+        let axis = horizontal ? a.width : a.height
+        let minimum = max(24, axis / 50)
+        let maximum = axis - 4
         guard minimum < maximum else { return nil }
         var candidates = Set(stride(from: minimum, through: maximum, by: 8))
         if let expected {
@@ -131,7 +165,9 @@ private enum PixelOverlapFinder {
 
         var best: (overlap: Int, score: Double)?
         for overlap in candidates {
-            let score = a.difference(to: b, overlap: overlap)
+            let score = horizontal
+                ? a.horizontalDifference(to: b, overlap: overlap)
+                : a.difference(to: b, overlap: overlap)
             if best == nil || score < best!.score { best = (overlap, score) }
         }
         guard let best, best.score < 22 else { return nil }
@@ -186,6 +222,27 @@ private struct PixelGrid {
                 total += abs(Int(bytes[upperIndex]) - Int(other.bytes[lowerIndex]))
                 total += abs(Int(bytes[upperIndex + 1]) - Int(other.bytes[lowerIndex + 1]))
                 total += abs(Int(bytes[upperIndex + 2]) - Int(other.bytes[lowerIndex + 2]))
+                count += 3
+            }
+        }
+        return count > 0 ? Double(total) / Double(count) : .greatestFiniteMagnitude
+    }
+
+    func horizontalDifference(to other: PixelGrid, overlap: Int) -> Double {
+        let columnSamples = min(14, max(overlap / 20, 4))
+        let rowStep = max(1, height / 32)
+        var total = 0
+        var count = 0
+        for sample in 0..<columnSamples {
+            let offset = (sample + 1) * overlap / (columnSamples + 1)
+            let leftCol = width - overlap + offset
+            let rightCol = offset
+            for row in stride(from: 0, to: height, by: rowStep) {
+                let leftIndex = (row * width + leftCol) * 4
+                let rightIndex = (row * width + rightCol) * 4
+                total += abs(Int(bytes[leftIndex]) - Int(other.bytes[rightIndex]))
+                total += abs(Int(bytes[leftIndex + 1]) - Int(other.bytes[rightIndex + 1]))
+                total += abs(Int(bytes[leftIndex + 2]) - Int(other.bytes[rightIndex + 2]))
                 count += 3
             }
         }

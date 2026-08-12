@@ -1,5 +1,124 @@
 import { theme } from "./theme";
 
+export type ProductStory = {
+  id: "freeze" | "explain" | "share";
+  eyebrow: string;
+  title: string;
+  body: string;
+  details: readonly string[];
+  mediaSrc: string;
+  mediaAlt: string;
+  tone: "paper" | "ink" | "mist";
+  reverse?: boolean;
+};
+
+export const productStories: readonly ProductStory[] = [
+  {
+    id: "freeze",
+    eyebrow: "01 · Capture",
+    title: "Freeze exactly what you saw.",
+    body: "Press one global hotkey and every display becomes a full-resolution frozen Capture. Drag a Selection, snap to a window, or continue into Scroll Capture without racing the screen.",
+    details: [
+      "Region, window, display, and Scroll Capture",
+      "Tab-to-snap window Selection",
+      "Full-resolution pixels across every display",
+    ],
+    mediaSrc: "/media/workflow-overlay.webp",
+    mediaAlt:
+      "Parcel Overlay with Window mode selected around a frozen application window",
+    tone: "paper",
+  },
+  {
+    id: "explain",
+    eyebrow: "02 · Editor",
+    title: "Make the point obvious.",
+    body: "Open the Editor with the right Tool already close at hand. Add an Arrow, highlight a region, Censor sensitive details, or reorder the Layer stack while the original Capture remains untouched.",
+    details: [
+      "Fourteen focused Annotation Tools",
+      "Click-to-edit styles, color, size, and position",
+      "Annotation-only undo and redo",
+    ],
+    mediaSrc: "/media/workflow-editor.webp",
+    mediaAlt:
+      "Parcel Editor showing Arrow, Rectangle, Censor, and Layer controls",
+    tone: "ink",
+    reverse: true,
+  },
+  {
+    id: "share",
+    eyebrow: "03 · Output",
+    title: "Share something polished.",
+    body: "Apply a saved brand kit, add window chrome and padding, then copy or export exactly what the Canvas shows. Recordings, local files, and optional Supabase links follow the same direct workflow.",
+    details: [
+      "Beautify backgrounds and saved brand kits",
+      "PNG, JPEG, HEIC, and TIFF output",
+      "Optional upload only when you choose it",
+    ],
+    mediaSrc: "/media/workflow-export.webp",
+    mediaAlt:
+      "Parcel output view showing a polished Capture and local export options",
+    tone: "mist",
+  },
+] as const;
+
+export const proofPoints = [
+  { value: "Native", label: "SwiftUI app" },
+  { value: "Local", label: "On-device Vision" },
+  { value: "Zero", label: "Cloud AI calls" },
+  { value: "MIT", label: "Open source" },
+] as const;
+
+export const focusedCapabilities = [
+  {
+    id: "capture-modes",
+    eyebrow: "Capture",
+    title: "Choose only what matters",
+    body: "Capture a region, window, display, or long scrolling surface from one frozen Overlay.",
+    mediaSrc: "/media/workflow-overlay.webp",
+    mediaAlt: "Parcel window Selection in the Overlay",
+  },
+  {
+    id: "annotation-tools",
+    eyebrow: "Annotation",
+    title: "Fourteen Tools, one clear Canvas",
+    body: "Arrows, Text, Pencil, Measure, Spotlight, Loupe, and more stay editable after creation.",
+    mediaSrc: "/media/workflow-editor.webp",
+    mediaAlt: "Parcel Annotation toolbar and Canvas",
+  },
+  {
+    id: "local-vision",
+    eyebrow: "Censor",
+    title: "Protect details on your Mac",
+    body: "Blur, pixelate, erase, recognize text, find faces, read QR codes, and translate locally.",
+    mediaSrc: "/media/workflow-editor.webp",
+    mediaAlt: "Censor Annotation and local inspection controls in Parcel",
+  },
+  {
+    id: "recording",
+    eyebrow: "Recording",
+    title: "Record the walkthrough too",
+    body: "Capture a region at up to 120 fps with system audio, click highlights, trimming, and GIF export.",
+    mediaSrc: "/media/workflow-overlay.webp",
+    mediaAlt: "Parcel Overlay with the Record mode available",
+  },
+  {
+    id: "beautify",
+    eyebrow: "Beautify",
+    title: "Turn utility into presentation",
+    body: "Add padding, gradients, window chrome, radius, and shadow, then save the combination as a brand kit.",
+    mediaSrc: "/media/workflow-export.webp",
+    mediaAlt: "A polished Parcel Capture using a saved Beautify brand kit",
+  },
+  {
+    id: "history-share",
+    eyebrow: "History",
+    title: "Re-edit instead of starting over",
+    body: "Open past Capture documents with their Annotations and settings, then save locally or upload by choice.",
+    mediaSrc: "/media/workflow-export.webp",
+    mediaAlt: "Parcel output controls for copying, saving, and optional sharing",
+  },
+] as const;
+
 export const stats = [
   { value: "14", label: "Annotation tools" },
   { value: "30", label: "Beautify gradients" },

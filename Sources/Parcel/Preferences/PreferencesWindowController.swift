@@ -15,8 +15,8 @@ final class PreferencesWindowController {
         }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 440, height: 260),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 720),
+            styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
         )

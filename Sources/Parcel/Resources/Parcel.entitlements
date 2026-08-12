@@ -6,5 +6,14 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
+	<!-- Sparkle appcast + optional Supabase upload -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- Optional microphone track when recording -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<!-- Optional webcam PiP while recording -->
+	<key>com.apple.security.device.camera</key>
+	<true/>
 </dict>
 </plist>

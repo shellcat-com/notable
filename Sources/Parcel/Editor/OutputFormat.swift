@@ -1,27 +1,41 @@
 import AppKit
 import UniformTypeIdentifiers
 
-/// Native image formats macOS can encode without bundling a third-party codec.
+/// Image formats Parcel can export. WebP uses bundled libwebp because ImageIO
+/// does not expose a WebP destination on every supported macOS version.
 enum OutputFormat: String, CaseIterable, Identifiable, Codable {
-    case png, jpeg, heic, tiff
+    case png, jpeg, heic, tiff, webp
 
     var id: String { rawValue }
     var label: String { rawValue.uppercased() }
-    var fileExtension: String { rawValue == "jpeg" ? "jpg" : rawValue }
+    var fileExtension: String {
+        switch self {
+        case .jpeg: return "jpg"
+        default: return rawValue
+        }
+    }
+
     var contentType: UTType {
         switch self {
         case .png: return .png
         case .jpeg: return .jpeg
         case .heic: return .heic
         case .tiff: return .tiff
+        case .webp: return UTType(filenameExtension: "webp") ?? .data
         }
     }
+
+    /// HEIC goes through ImageIO; WebP is handled by ParcelWebPEncoder.
+    var usesImageIO: Bool {
+        self == .heic
+    }
+
     var bitmapType: NSBitmapImageRep.FileType? {
         switch self {
         case .png: return .png
         case .jpeg: return .jpeg
-        case .heic: return nil
         case .tiff: return .tiff
+        case .heic, .webp: return nil
         }
     }
 }

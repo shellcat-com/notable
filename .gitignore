@@ -22,6 +22,7 @@ xcuserdata/
 ## XcodeGen — the project is generated from project.yml.
 ## Regenerate locally with `xcodegen generate`.
 Parcel.xcodeproj/
+Notable.xcodeproj/
 
 ## Swift Package Manager
 .build/
@@ -31,5 +32,20 @@ Package.resolved
 ## Misc
 *.log
 .derivedData-release/
-.vercel-deploy*.json
+.vercel-*
+.deploy-*
+.mcp-*
+qa-evidence/
 .cursor/
+
+# Local deployment and macOS UI-automation helpers (not release inputs)
+Scripts/deploy-parts-helper.mjs
+Scripts/mcp-deploy.cjs
+Scripts/mcp-deploy.mjs
+Scripts/click-add-screen-recording.swift
+Scripts/dump-settings-ax.swift
+Scripts/enable-screen-recording.swift
+Scripts/install-dev.sh
+
+# Legacy, unused local artwork retained only for migration reference
+Website/public/assets/notable-permission.svg

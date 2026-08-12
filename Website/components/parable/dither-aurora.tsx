@@ -17,15 +17,15 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = React.useState(false);
-  React.useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduced;
+  return React.useSyncExternalStore(
+    (onStoreChange) => {
+      const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+      query.addEventListener("change", onStoreChange);
+      return () => query.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false
+  );
 }
 
 const VERT = `
@@ -171,8 +171,9 @@ export function DitherAurora({
 
   // Live-updatable knobs that must not tear down the GL context.
   const live = React.useRef({ speed, paused });
-  live.current.speed = speed;
-  live.current.paused = paused;
+  React.useEffect(() => {
+    live.current = { speed, paused };
+  }, [speed, paused]);
 
   const colorKey = `${colors.join("|")}|${background}`;
 
