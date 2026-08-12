@@ -11,8 +11,26 @@ struct MenuBarContent: View {
         }
         .keyboardShortcut("2", modifiers: [.command, .shift])
 
+        Button("Capture Previous Area") {
+            coordinator.beginPreviousAreaCapture()
+        }
+        .keyboardShortcut("5", modifiers: [.command, .shift])
+        .disabled(!CapturePreferences.hasPreviousArea)
+
+        Button("Capture Window") {
+            coordinator.beginWindowCapture()
+        }
+
+        Button("Capture Display") {
+            coordinator.beginFullscreenCapture()
+        }
+
         Button("Capture All Displays") {
             coordinator.beginAllDisplaysCapture()
+        }
+
+        Button("Copy Text (OCR)") {
+            coordinator.beginOCRCapture()
         }
 
         Menu("Capture with Delay") {
@@ -23,7 +41,21 @@ struct MenuBarContent: View {
         .disabled(coordinator.isCapturing && coordinator.captureDelayRemaining == nil)
 
         if let remaining = coordinator.captureDelayRemaining {
-            Text("Capturing in \(Int(ceil(remaining)))s…")
+            Text(CountdownDisplay.captureLabel(remaining: remaining))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .disabled(true)
+        }
+
+        if let remaining = coordinator.recordingCountdownRemaining {
+            Text(CountdownDisplay.recordingLabel(remaining: remaining))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .disabled(true)
+        }
+
+        if let banner = coordinator.statusBanner {
+            Text(banner)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .disabled(true)
@@ -55,11 +87,32 @@ struct MenuBarContent: View {
             coordinator.toggleRecording()
         } label: {
             Label(
-                coordinator.isRecording ? "Stop Recording" : "Record Display…",
+                coordinator.isRecording
+                    ? (coordinator.isPausedRecording ? "Resume / Stop Recording" : "Stop Recording")
+                    : "Record Region…",
                 systemImage: coordinator.isRecording ? "stop.fill" : "record.circle"
             )
         }
         .disabled(coordinator.isStartingRecording || coordinator.isCapturing)
+
+        Button("Record Previous Area") {
+            coordinator.beginPreviousRecordingArea()
+        }
+        .disabled(
+            coordinator.isStartingRecording
+                || coordinator.isCapturing
+                || coordinator.isRecording
+                || !CapturePreferences.hasPreviousRecordingArea
+        )
+
+        if coordinator.isRecording {
+            Button(coordinator.isPausedRecording ? "Resume Recording" : "Pause Recording") {
+                coordinator.pauseOrResumeRecording()
+            }
+            Button("Restart Recording") {
+                coordinator.restartRecording()
+            }
+        }
 
         Menu("Recording FPS") {
             ForEach(RecordingFPS.allCases) { fps in
@@ -73,6 +126,28 @@ struct MenuBarContent: View {
                     }
                 }
             }
+        }
+
+        Divider()
+
+        Button("Open from Clipboard") {
+            coordinator.openFromClipboard()
+        }
+
+        Button("Restore Recently Closed") {
+            coordinator.restoreRecentlyClosed()
+        }
+
+        Button(coordinator.pinsHidden ? "Show Overlays" : "Hide Overlays") {
+            coordinator.hideAllOverlays()
+        }
+
+        Button("Close All Pins", role: .destructive) {
+            coordinator.closeAllPins()
+        }
+
+        Button("Annotate Last Capture") {
+            coordinator.annotateLastCapture()
         }
 
         Divider()

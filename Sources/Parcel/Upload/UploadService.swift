@@ -22,7 +22,13 @@ enum UploadError: LocalizedError {
 
 /// Uploads rendered Capture bytes to Supabase Storage via the REST API.
 enum UploadService {
-    static func uploadPNG(data: Data, fileName: String) async throws -> URL {
+    typealias DataLoader = (URLRequest) async throws -> (Data, URLResponse)
+
+    static func uploadPNG(
+        data: Data,
+        fileName: String,
+        dataLoader: DataLoader = defaultDataLoader
+    ) async throws -> URL {
         guard UploadPreferences.isConfigured else { throw UploadError.notConfigured }
 
         let base = UploadPreferences.supabaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
@@ -39,7 +45,7 @@ enum UploadService {
         request.setValue("true", forHTTPHeaderField: "x-upsert")
         request.httpBody = data
 
-        let (responseData, response) = try await URLSession.shared.data(for: request)
+        let (responseData, response) = try await dataLoader(request)
         guard let http = response as? HTTPURLResponse else { throw UploadError.invalidResponse }
         guard (200...299).contains(http.statusCode) else {
             let body = String(data: responseData, encoding: .utf8) ?? ""
@@ -58,5 +64,9 @@ enum UploadService {
             throw UploadError.invalidResponse
         }
         return publicURL
+    }
+
+    private static func defaultDataLoader(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        try await URLSession.shared.data(for: request)
     }
 }

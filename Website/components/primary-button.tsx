@@ -8,6 +8,7 @@ type PrimaryButtonProps = {
   className?: string;
   variant?: "accent" | "white";
   external?: boolean;
+  download?: boolean;
 };
 
 /** High-contrast CTA — Discord/Linear pattern (readable on dark aurora) */
@@ -17,16 +18,19 @@ export function PrimaryButton({
   className,
   variant = "accent",
   external,
+  download,
 }: PrimaryButtonProps) {
   const styles =
     variant === "accent"
       ? "bg-[var(--brand-accent)] text-[var(--brand-ink)] shadow-[0_0_40px_color-mix(in_srgb,var(--brand-accent)_35%,transparent)] hover:brightness-110"
       : "bg-white text-[var(--brand-ink)] shadow-[0_8px_32px_rgba(0,0,0,0.35)] hover:bg-zinc-100";
 
-  const Comp = external ? "a" : Link;
+  const Comp = external || download ? "a" : Link;
   const extra = external
     ? { target: "_blank", rel: "noopener noreferrer" }
-    : {};
+    : download
+      ? { download: true }
+      : {};
 
   return (
     <Comp

@@ -1,44 +1,57 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Registers a single global hotkey via the Carbon Hot Key API.
+/// Registers multiple global hotkeys via the Carbon Hot Key API.
 ///
-/// `RegisterEventHotKey` is the mechanism used by KeyboardShortcuts/HotKey. Unlike a `CGEventTap`
-/// it requires **no** Accessibility/Input Monitoring permission for a plain modifier+key combo,
-/// which removes a whole class of first-run permission dead-ends. The Carbon callback is a C
-/// function pointer that can't capture context, so we thread `self` through `userData`.
+/// `RegisterEventHotKey` needs **no** Accessibility permission for plain modifier+key combos.
 final class HotKeyManager {
 
-    /// Fires on the main queue when the hotkey is pressed.
-    var onHotKey: (() -> Void)?
-
-    private var hotKeyRef: EventHotKeyRef?
-    private var handlerRef: EventHandlerRef?
-    private let signature: OSType = 0x4E4F5442 // 'NOTB'
-
-    /// Default capture shortcut: ⌘⇧2 (⌘⇧3/4/5 belong to the macOS screenshot service).
-    func registerDefault() {
-        register(keyCode: HotKeyPreferences.keyCode, modifiers: HotKeyPreferences.modifiers)
+    enum Action: UInt32 {
+        case captureRegion = 1
+        case captureCopy = 2
+        case captureAnnotate = 3
+        case capturePin = 4
+        case captureSave = 5
+        case capturePrevious = 6
+        case openClipboard = 7
+        case restoreClosed = 8
+        case hideOverlays = 9
+        case annotateLast = 10
+        case ocr = 11
     }
 
-    func register(keyCode: UInt32, modifiers: UInt32) {
-        installHandlerIfNeeded()
-        unregisterHotKey()
+    /// Fires on the main queue when a registered hotkey is pressed.
+    var onAction: ((Action) -> Void)?
 
-        var ref: EventHotKeyRef?
-        let hotKeyID = EventHotKeyID(signature: signature, id: 1)
-        let status = RegisterEventHotKey(
-            keyCode, modifiers, hotKeyID, GetEventDispatcherTarget(), 0, &ref
+    /// Legacy single-callback used when only the primary Capture hotkey matters.
+    var onHotKey: (() -> Void)? {
+        didSet {
+            // Keep backward compatibility: primary action also invokes onHotKey.
+        }
+    }
+
+    private var hotKeyRefs: [Action: EventHotKeyRef] = [:]
+    private var handlerRef: EventHandlerRef?
+    private let signature: OSType = 0x5052434C // 'PRCL'
+
+    func registerDefault() {
+        installHandlerIfNeeded()
+        unregisterHotKeys()
+
+        register(
+            action: .captureRegion,
+            keyCode: HotKeyPreferences.keyCode,
+            modifiers: HotKeyPreferences.modifiers
         )
-        if status == noErr {
-            hotKeyRef = ref
-        } else {
-            NSLog("Parcel: RegisterEventHotKey failed (status \(status))")
+
+        for binding in HotKeyPreferences.extraBindings {
+            guard binding.isEnabled else { continue }
+            register(action: binding.action, keyCode: binding.keyCode, modifiers: binding.modifiers)
         }
     }
 
     func unregisterAll() {
-        unregisterHotKey()
+        unregisterHotKeys()
         if let handlerRef {
             RemoveEventHandler(handlerRef)
             self.handlerRef = nil
@@ -46,6 +59,19 @@ final class HotKeyManager {
     }
 
     // MARK: Private
+
+    private func register(action: Action, keyCode: UInt32, modifiers: UInt32) {
+        var ref: EventHotKeyRef?
+        let hotKeyID = EventHotKeyID(signature: signature, id: action.rawValue)
+        let status = RegisterEventHotKey(
+            keyCode, modifiers, hotKeyID, GetEventDispatcherTarget(), 0, &ref
+        )
+        if status == noErr, let ref {
+            hotKeyRefs[action] = ref
+        } else {
+            NSLog("Parcel: RegisterEventHotKey failed for \(action) (status \(status))")
+        }
+    }
 
     private func installHandlerIfNeeded() {
         guard handlerRef == nil else { return }
@@ -56,20 +82,36 @@ final class HotKeyManager {
         let selfPtr = Unmanaged.passUnretained(self).toOpaque()
         InstallEventHandler(
             GetEventDispatcherTarget(),
-            { _, _, userData -> OSStatus in
-                guard let userData else { return noErr }
+            { _, event, userData -> OSStatus in
+                guard let userData, let event else { return noErr }
+                var hotKeyID = EventHotKeyID()
+                GetEventParameter(
+                    event,
+                    EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID),
+                    nil,
+                    MemoryLayout<EventHotKeyID>.size,
+                    nil,
+                    &hotKeyID
+                )
                 let manager = Unmanaged<HotKeyManager>.fromOpaque(userData).takeUnretainedValue()
-                DispatchQueue.main.async { manager.onHotKey?() }
+                let action = Action(rawValue: hotKeyID.id) ?? .captureRegion
+                DispatchQueue.main.async {
+                    manager.onAction?(action)
+                    if action == .captureRegion {
+                        manager.onHotKey?()
+                    }
+                }
                 return noErr
             },
             1, &eventType, selfPtr, &handlerRef
         )
     }
 
-    private func unregisterHotKey() {
-        if let hotKeyRef {
-            UnregisterEventHotKey(hotKeyRef)
-            self.hotKeyRef = nil
+    private func unregisterHotKeys() {
+        for (_, ref) in hotKeyRefs {
+            UnregisterEventHotKey(ref)
         }
+        hotKeyRefs.removeAll()
     }
 }

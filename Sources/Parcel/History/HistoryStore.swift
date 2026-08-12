@@ -73,12 +73,57 @@ struct HistoryEntry: Codable, Identifiable, Equatable {
         Self.displayFormatter.string(from: updatedAt)
     }
 
+    func matchesFilter(_ filter: String) -> Bool {
+        let query = filter.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return true }
+        let compactDimensions = "\(pixelWidth)x\(pixelHeight)"
+        let displayDimensions = "\(pixelWidth) × \(pixelHeight)"
+        return captureFileName.lowercased().contains(query)
+            || displayDate.lowercased().contains(query)
+            || compactDimensions.contains(query)
+            || displayDimensions.contains(query)
+    }
+
     private static let displayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter
     }()
+}
+
+enum HistoryRetention: String, CaseIterable, Identifiable {
+    case day, week, month, forever
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .day: return "1 day"
+        case .week: return "1 week"
+        case .month: return "1 month"
+        case .forever: return "Forever"
+        }
+    }
+
+    var maxAge: TimeInterval? {
+        switch self {
+        case .day: return 24 * 60 * 60
+        case .week: return 7 * 24 * 60 * 60
+        case .month: return 30 * 24 * 60 * 60
+        case .forever: return nil
+        }
+    }
+
+    private static let key = "\(AppIdentity.defaultsPrefix).history.retention"
+
+    static var current: HistoryRetention {
+        get {
+            let raw = UserDefaults.standard.string(forKey: key) ?? ""
+            return HistoryRetention(rawValue: raw) ?? .forever
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: key) }
+    }
 }
 
 struct RestoredCaptureDocument {
@@ -97,15 +142,29 @@ final class HistoryStore: ObservableObject {
     private let rootURL: URL
     private let indexURL: URL
 
-    init(fileManager: FileManager = .default) {
+    init(fileManager: FileManager = .default, rootURL overrideRootURL: URL? = nil) {
         self.fileManager = fileManager
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        rootURL = appSupport
-            .appendingPathComponent(AppIdentity.appSupportComponent, isDirectory: true)
-            .appendingPathComponent("History", isDirectory: true)
+        if let overrideRootURL {
+            rootURL = overrideRootURL
+        } else {
+            let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            rootURL = appSupport
+                .appendingPathComponent(AppIdentity.appSupportComponent, isDirectory: true)
+                .appendingPathComponent("History", isDirectory: true)
+        }
         indexURL = rootURL.appendingPathComponent("index.json")
         createRootIfNeeded()
         loadIndex()
+        pruneExpiredEntries()
+    }
+
+    func pruneExpiredEntries() {
+        guard let maxAge = HistoryRetention.current.maxAge else { return }
+        let cutoff = Date().addingTimeInterval(-maxAge)
+        let expired = entries.filter { $0.updatedAt < cutoff }
+        for entry in expired {
+            remove(entry.id)
+        }
     }
 
     @discardableResult
@@ -271,10 +330,16 @@ final class BrandKitStore: ObservableObject {
     static let shared = BrandKitStore()
 
     @Published private(set) var kits: [BrandKit] = []
-    private let defaultsKey = "\(AppIdentity.defaultsPrefix).brandKits"
+    private let userDefaults: UserDefaults
+    private let defaultsKey: String
 
-    private init() {
-        guard let data = UserDefaults.standard.data(forKey: defaultsKey) else { return }
+    init(
+        userDefaults: UserDefaults = .standard,
+        defaultsKey: String = "\(AppIdentity.defaultsPrefix).brandKits"
+    ) {
+        self.userDefaults = userDefaults
+        self.defaultsKey = defaultsKey
+        guard let data = userDefaults.data(forKey: defaultsKey) else { return }
         kits = (try? JSONDecoder().decode([BrandKit].self, from: data)) ?? []
     }
 
@@ -291,6 +356,6 @@ final class BrandKitStore: ObservableObject {
     }
 
     private func persist() {
-        UserDefaults.standard.set(try? JSONEncoder().encode(kits), forKey: defaultsKey)
+        userDefaults.set(try? JSONEncoder().encode(kits), forKey: defaultsKey)
     }
 }

@@ -14,7 +14,8 @@ enum Smoke {
             else { failed += 1; print("FAIL: \(name)") }
         }
 
-        let appPath = ".derivedData/Build/Products/Debug/Parcel.app"
+        let appPath = ProcessInfo.processInfo.environment["PARCEL_APP_PATH"]
+            ?? ".derivedData/Build/Products/Debug/Parcel.app"
         let infoPlist = "\(appPath)/Contents/Info.plist"
         check("Parcel.app exists", FileManager.default.fileExists(atPath: appPath))
         check("Info.plist exists", FileManager.default.fileExists(atPath: infoPlist))
@@ -29,13 +30,13 @@ enum Smoke {
             check("Info.plist readable", false)
         }
 
-        let entitlements = "\(appPath)/Contents/embedded.provisionprofile"
         // ad-hoc builds may not embed profile; check entitlements via codesign
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
         task.arguments = ["-d", "--entitlements", ":-", appPath]
         let pipe = Pipe()
         task.standardOutput = pipe
+        task.standardError = pipe
         try? task.run()
         task.waitUntilExit()
         let entData = pipe.fileHandleForReading.readDataToEndOfFile()
@@ -52,8 +53,8 @@ enum Smoke {
 
         check("Sparkle framework embedded", FileManager.default.fileExists(atPath: "\(appPath)/Contents/Frameworks/Sparkle.framework"))
 
-        let websiteDist = "Website/dist/index.html"
-        check("Website built", FileManager.default.fileExists(atPath: websiteDist))
+        let websiteOutputs = ["Website/dist/index.html", "Website/out/index.html", "Website/.next/BUILD_ID"]
+        check("Website built", websiteOutputs.contains { FileManager.default.fileExists(atPath: $0) })
 
         let appcast = "Website/public/appcast.xml"
         check("Sparkle appcast exists", FileManager.default.fileExists(atPath: appcast))

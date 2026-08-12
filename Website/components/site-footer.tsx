@@ -6,6 +6,7 @@ const footerLinks = {
   Product: [
     { label: "Features", href: "/#features" },
     { label: "Workflow", href: "/#workflow" },
+    { label: "Privacy", href: "/#privacy" },
     { label: "Install", href: "/#install" },
     { label: "Download", href: DOWNLOAD_URL, download: true },
   ],
@@ -41,27 +42,18 @@ export function SiteFooter() {
               The native macOS Capture studio from{" "}
               <a
                 href="https://parable.dev"
-                className="text-zinc-200 underline-offset-4 hover:underline"
+                className="text-zinc-200 underline underline-offset-4"
               >
                 Parable
               </a>
               . MIT licensed — no cloud AI, ever.
             </p>
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--brand-accent)] opacity-40" />
-                <span className="relative inline-flex size-2 rounded-full bg-[var(--brand-accent)]" />
-              </span>
-              <span className="font-mono text-[11px] text-zinc-400">
-                All systems operational
-              </span>
-            </div>
           </div>
 
           <nav className="grid grid-cols-2 gap-8 sm:grid-cols-3">
             {Object.entries(footerLinks).map(([group, links]) => (
               <div key={group}>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">
                   {group}
                 </p>
                 <ul className="mt-3 space-y-2.5">
@@ -107,16 +99,7 @@ export function SiteFooter() {
           </nav>
         </div>
 
-        <div
-          aria-hidden
-          className="pointer-events-none mt-16 select-none overflow-hidden"
-        >
-          <p className="text-[clamp(4rem,18vw,12rem)] font-bold leading-none tracking-tighter text-white/[0.04]">
-            Parcel
-          </p>
-        </div>
-
-        <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-white/8 pt-6 text-xs text-zinc-500 sm:flex-row">
+        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/8 pt-6 text-xs text-zinc-400 sm:flex-row">
           <p>© {new Date().getFullYear()} Parable · MIT License</p>
           <p className="font-mono">
             SwiftUI · ScreenCaptureKit · Next.js

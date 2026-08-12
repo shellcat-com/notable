@@ -95,12 +95,16 @@ Signed, notarized builds via [`Scripts/release.sh`](Scripts/release.sh):
 
 ```sh
 DEVELOPMENT_TEAM=XXXXXXXXXX \
-APPLE_ID=you@example.com \
-APPLE_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx \
+NOTARYTOOL_PROFILE=parcel-release \
+UPDATE_APPCAST=1 \
 ./Scripts/release.sh
 ```
 
-Set `SKIP_NOTARIZE=1` for unsigned local Release builds. Tag `v*` triggers [`.github/workflows/release.yml`](.github/workflows/release.yml).
+Use `APPLE_ID` + `APPLE_APP_PASSWORD` instead of `NOTARYTOOL_PROFILE` if preferred. Run
+[`Scripts/verify-release-gates.sh`](Scripts/verify-release-gates.sh) before release and
+[`Scripts/verify-release.sh`](Scripts/verify-release.sh) after packaging. Set `SKIP_NOTARIZE=1`
+for unsigned local Release builds. See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md)
+for the full public ZIP runbook. Tag `v*` triggers [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
 <br>
 

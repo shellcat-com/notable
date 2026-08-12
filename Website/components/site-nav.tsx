@@ -38,6 +38,7 @@ export function SiteNav() {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
   const isHome = pathname === "/";
+  const onHero = isHome && !scrolled;
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -58,16 +59,19 @@ export function SiteNav() {
       >
         <Link href="/" className="flex items-center gap-2.5">
           <ParcelMark />
-          <span className="text-sm font-semibold tracking-tight">Parcel</span>
+          <span className={cn("text-sm font-semibold tracking-tight", onHero && "text-white")}>Parcel</span>
         </Link>
 
-        <nav className="ml-1 hidden items-center md:flex">
+        <nav className="ml-1 hidden items-center lg:flex">
           {LINKS.map((l) =>
             "isRoute" in l && l.isRoute ? (
               <Link
                 key={l.href}
                 href={l.href}
-                className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm transition-colors",
+                  onHero ? "text-zinc-400 hover:text-white" : "text-muted-foreground hover:text-foreground"
+                )}
               >
                 {l.label}
               </Link>
@@ -75,7 +79,10 @@ export function SiteNav() {
               <a
                 key={l.href}
                 href={l.href}
-                className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm transition-colors",
+                  onHero ? "text-zinc-400 hover:text-white" : "text-muted-foreground hover:text-foreground"
+                )}
               >
                 {l.label}
               </a>
@@ -84,27 +91,38 @@ export function SiteNav() {
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5">
-          <ThemeToggle />
+          <ThemeToggle onHero={onHero} />
           <a
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="GitHub"
-            className="hidden size-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
+            className={cn(
+              "hidden size-8 items-center justify-center rounded-lg border transition-colors sm:inline-flex",
+              onHero
+                ? "border-white/15 text-zinc-400 hover:text-white"
+                : "border-border/60 text-muted-foreground hover:text-foreground"
+            )}
           >
             <GithubMark />
           </a>
-          <Link
+          <a
             href={DOWNLOAD_URL}
+            download
             className="hidden items-center justify-center rounded-full bg-[var(--brand-accent)] px-4 py-2 text-xs font-semibold text-[var(--brand-ink)] transition-all hover:brightness-110 sm:inline-flex"
           >
             Download
-          </Link>
+          </a>
           <button
             onClick={() => setMobileOpen((o) => !o)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
-            className="inline-flex size-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground md:hidden"
+            className={cn(
+              "inline-flex size-8 items-center justify-center rounded-lg border lg:hidden",
+              onHero
+                ? "border-white/15 text-zinc-300"
+                : "border-border/60 text-muted-foreground"
+            )}
           >
             {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
@@ -112,7 +130,7 @@ export function SiteNav() {
       </div>
 
       {mobileOpen && (
-        <nav className="mx-auto mt-2 max-w-6xl rounded-2xl border border-border/60 bg-background/95 p-3 backdrop-blur-xl md:hidden">
+        <nav className="mx-auto mt-2 max-w-6xl rounded-2xl border border-border/60 bg-background/95 p-3 backdrop-blur-xl lg:hidden">
           {LINKS.map((l) =>
             "isRoute" in l && l.isRoute ? (
               <Link
@@ -136,6 +154,7 @@ export function SiteNav() {
           )}
           <a
             href={DOWNLOAD_URL}
+            download
             className="mt-2 block rounded-xl bg-[var(--brand-accent)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--brand-ink)]"
           >
             Download for macOS
@@ -146,10 +165,13 @@ export function SiteNav() {
   );
 }
 
-function ThemeToggle() {
+function ThemeToggle({ onHero = false }: { onHero?: boolean }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = React.useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false
+  );
 
   if (!mounted) {
     return <span aria-hidden className="inline-block size-8" />;
@@ -162,7 +184,12 @@ function ThemeToggle() {
       type="button"
       onClick={() => setTheme(dark ? "light" : "dark")}
       aria-label="Toggle theme"
-      className="inline-flex size-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
+      className={cn(
+        "inline-flex size-8 items-center justify-center rounded-lg border transition-colors",
+        onHero
+          ? "border-white/15 text-zinc-300 hover:text-white"
+          : "border-border/60 text-muted-foreground hover:text-foreground"
+      )}
     >
       {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </button>

@@ -27,7 +27,7 @@ Additional checks:
 
 - [ ] Confirm Capture does **not** crash (SCStream fallback)
 - [ ] Confirm recording produces playable MP4 with audio (AVFoundation writer)
-- [ ] Translation button hidden or disabled (requires macOS 15+)
+- [ ] Translation button hidden or disabled (requires macOS 26+)
 
 ## Logging
 

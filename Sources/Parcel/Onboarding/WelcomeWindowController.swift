@@ -17,8 +17,8 @@ final class WelcomeWindowController {
         if window == nil {
             let view = WelcomeView(
                 onGrantPermission: {
-                    ScreenRecordingPermission.request()
                     ScreenRecordingPermission.openSystemSettings()
+                    ScreenRecordingPermission.revealAppInFinder()
                 },
                 onOpenPreferences: { [weak self] in
                     self?.onOpenPreferences()
@@ -93,7 +93,7 @@ struct WelcomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onReceive(poll) { _ in
             Task { @MainActor in
-                hasPermission = await ScreenRecordingPermission.hasEffectiveAccess()
+                hasPermission = ScreenRecordingPermission.isGranted
             }
         }
     }

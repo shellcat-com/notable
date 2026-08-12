@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Parcel Editor with Annotations</title>
+  <desc id="desc">A staged Parcel Editor showing a Capture, Annotation toolbar, Censor, Layers, and export controls.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0a0b0e"/><stop offset=".55" stop-color="#141219"/><stop offset="1" stop-color="#0c1715"/></linearGradient>
+    <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f7f8"/><stop offset=".55" stop-color="#e8eeec"/><stop offset="1" stop-color="#eee7f4"/></linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b5cf6"/><stop offset=".52" stop-color="#5ee4b5"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="30" stdDeviation="28" flood-color="#000" flood-opacity=".52"/></filter>
+    <filter id="blur"><feGaussianBlur stdDeviation="7"/></filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#ff4d47"/></marker>
+  </defs>
+  <rect width="1440" height="900" fill="url(#bg)"/>
+  <circle cx="115" cy="80" r="300" fill="#8b5cf6" opacity=".11" filter="url(#blur)"/><circle cx="1310" cy="830" r="300" fill="#5ee4b5" opacity=".1" filter="url(#blur)"/>
+  <g transform="translate(70 54)" filter="url(#shadow)">
+    <rect width="1300" height="792" rx="30" fill="#202125" stroke="#ffffff" stroke-opacity=".13"/>
+    <rect width="1300" height="68" rx="30" fill="#292a2f"/><rect y="39" width="1300" height="29" fill="#292a2f"/>
+    <circle cx="32" cy="34" r="9" fill="#ff5f57"/><circle cx="60" cy="34" r="9" fill="#febc2e"/><circle cx="88" cy="34" r="9" fill="#28c840"/>
+    <text x="120" y="41" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="18" font-weight="650" fill="#d8d9dd">Parcel</text>
+    <text x="1234" y="41" font-family="ui-monospace,SFMono-Regular,monospace" font-size="13" fill="#9497a0">2×</text>
+
+    <g transform="translate(0 68)">
+      <rect width="1300" height="74" fill="#17181c"/>
+      <text x="22" y="46" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="700" fill="#a5a8b1">CREATE</text>
+      <g transform="translate(98 14)" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600">
+        <rect width="74" height="46" rx="12" fill="#8b5cf6"/><text x="20" y="29" fill="white">Arrow</text>
+        <rect x="82" width="92" height="46" rx="12" fill="#ffffff" opacity=".055"/><text x="99" y="29" fill="#b7bac2">Rectangle</text>
+        <rect x="182" width="74" height="46" rx="12" fill="#ffffff" opacity=".055"/><text x="201" y="29" fill="#b7bac2">Text</text>
+        <rect x="264" width="78" height="46" rx="12" fill="#ffffff" opacity=".055"/><text x="281" y="29" fill="#b7bac2">Pencil</text>
+        <rect x="350" width="82" height="46" rx="12" fill="#ffffff" opacity=".055"/><text x="369" y="29" fill="#b7bac2">Censor</text>
+        <rect x="440" width="88" height="46" rx="12" fill="#ffffff" opacity=".055"/><text x="457" y="29" fill="#b7bac2">Spotlight</text>
+        <rect x="536" width="72" height="46" rx="12" fill="#ffffff" opacity=".055"/><text x="554" y="29" fill="#b7bac2">Loupe</text>
+      </g>
+      <g transform="translate(1026 15)" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="650">
+        <rect width="74" height="44" rx="12" fill="#ffffff" opacity=".07"/><text x="19" y="28" fill="#d5d7dc">Copy</text>
+        <rect x="82" width="74" height="44" rx="12" fill="#ffffff" opacity=".07"/><text x="102" y="28" fill="#d5d7dc">Save</text>
+        <rect x="164" width="88" height="44" rx="12" fill="#5ee4b5"/><text x="184" y="28" fill="#07110e">Export</text>
+      </g>
+    </g>
+
+    <rect x="26" y="166" width="980" height="578" rx="22" fill="#111216"/>
+    <rect x="62" y="194" width="908" height="520" rx="16" fill="url(#canvas)"/>
+    <rect x="108" y="230" width="816" height="92" rx="22" fill="#ffffff" opacity=".86"/>
+    <circle cx="164" cy="276" r="25" fill="url(#brand)"/>
+    <rect x="210" y="252" width="244" height="15" rx="7" fill="#202631" opacity=".78"/>
+    <rect x="210" y="284" width="484" height="11" rx="5" fill="#6b7280" opacity=".38"/>
+    <rect x="108" y="348" width="372" height="314" rx="22" fill="#181e2b"/>
+    <rect x="508" y="348" width="416" height="142" rx="22" fill="#ffffff" opacity=".78"/>
+    <rect x="508" y="516" width="416" height="146" rx="22" fill="#f0e9f5"/>
+    <path d="M168 602 C220 486 302 554 412 400" stroke="#5ee4b5" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <circle cx="260" cy="512" r="82" fill="none" stroke="#8b5cf6" stroke-width="24" opacity=".85"/>
+    <path d="M578 438 C670 420 756 396 844 362" stroke="#ff4d47" stroke-width="12" fill="none" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <rect x="610" y="546" width="228" height="74" rx="13" fill="#15171c" opacity=".86" filter="url(#blur)"/>
+    <rect x="596" y="532" width="256" height="102" rx="16" fill="none" stroke="#ff4d47" stroke-width="5" stroke-dasharray="11 8"/>
+    <rect x="122" y="364" width="344" height="282" rx="18" fill="none" stroke="#8b5cf6" stroke-width="4"/>
+    <g fill="#8b5cf6"><circle cx="122" cy="364" r="8"/><circle cx="466" cy="364" r="8"/><circle cx="122" cy="646" r="8"/><circle cx="466" cy="646" r="8"/></g>
+
+    <g transform="translate(1030 166)">
+      <rect width="244" height="578" rx="22" fill="#17181c" stroke="#ffffff" stroke-opacity=".08"/>
+      <text x="22" y="39" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="700" fill="#a5a8b1">LAYERS</text>
+      <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#d2d4da">
+        <rect x="14" y="60" width="216" height="52" rx="13" fill="#8b5cf6" opacity=".2"/><circle cx="38" cy="86" r="8" fill="#ff4d47"/><text x="58" y="91">Arrow</text>
+        <rect x="14" y="120" width="216" height="52" rx="13" fill="#ffffff" opacity=".045"/><circle cx="38" cy="146" r="8" fill="#8b5cf6"/><text x="58" y="151">Rectangle</text>
+        <rect x="14" y="180" width="216" height="52" rx="13" fill="#ffffff" opacity=".045"/><circle cx="38" cy="206" r="8" fill="#a6a8ae"/><text x="58" y="211">Censor</text>
+        <rect x="14" y="240" width="216" height="52" rx="13" fill="#ffffff" opacity=".045"/><circle cx="38" cy="266" r="8" fill="#5ee4b5"/><text x="58" y="271">Spotlight</text>
+      </g>
+      <text x="22" y="342" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="700" fill="#a5a8b1">STYLE</text>
+      <circle cx="38" cy="386" r="15" fill="#ff4d47"/><rect x="66" y="376" width="148" height="20" rx="10" fill="#ffffff" opacity=".08"/>
+      <rect x="22" y="422" width="194" height="8" rx="4" fill="#ffffff" opacity=".09"/><rect x="22" y="422" width="112" height="8" rx="4" fill="#5ee4b5"/>
+      <rect x="22" y="464" width="90" height="38" rx="11" fill="#ffffff" opacity=".07"/><rect x="122" y="464" width="94" height="38" rx="11" fill="#ffffff" opacity=".07"/>
+      <rect x="22" y="522" width="194" height="42" rx="12" fill="#ffffff" opacity=".08"/><text x="75" y="548" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#c9cbd1">Bring forward</text>
+    </g>
+    <text x="40" y="775" font-family="ui-monospace,SFMono-Regular,monospace" font-size="13" fill="#92959e">1440 × 900 pt · Arrow selected · on screen = saved</text>
+  </g>
+</svg>
