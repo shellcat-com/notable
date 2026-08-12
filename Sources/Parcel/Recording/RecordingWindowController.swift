@@ -129,7 +129,22 @@ final class RecordingEditorModel: ObservableObject {
         exporter.outputURL = url
         exporter.outputFileType = .mp4
         exporter.timeRange = timeRange
-        try await exporter.export(to: url, as: .mp4)
+        if #available(macOS 15.0, *) {
+            try await exporter.export(to: url, as: .mp4)
+        } else {
+            try await withCheckedThrowingContinuation { continuation in
+                exporter.exportAsynchronously {
+                    switch exporter.status {
+                    case .completed:
+                        continuation.resume()
+                    case .cancelled:
+                        continuation.resume(throwing: CancellationError())
+                    default:
+                        continuation.resume(throwing: exporter.error ?? ExportError.failed)
+                    }
+                }
+            }
+        }
     }
 
     func writeGIF(to url: URL) async throws {
@@ -181,7 +196,16 @@ final class RecordingEditorModel: ObservableObject {
 
     private enum ExportError: LocalizedError {
         case unavailable
-        var errorDescription: String? { "This recording cannot be exported on this Mac." }
+        case failed
+
+        var errorDescription: String? {
+            switch self {
+            case .unavailable:
+                "This recording cannot be exported on this Mac."
+            case .failed:
+                "The recording export did not complete."
+            }
+        }
     }
 }
 
