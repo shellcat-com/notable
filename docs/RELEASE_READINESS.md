@@ -11,9 +11,10 @@ Scripts/write-release-gate-handoff.sh
 Scripts/verify-release-gate-evidence.sh qa-evidence/final-ship-YYYY-MM-DD/release-gate-handoff-current
 ```
 
-The preflight checks local tools, Developer ID identity, notary credential availability, Sparkle
-signing material, appcast/ZIP write access, Screen Recording verification, second-display access,
-Supabase live-test credentials, and macOS 13 fallback availability.
+The preflight checks local tools, Developer ID identity, notary credential availability (including
+the named `NOTARYTOOL_PROFILE` keychain profile), Sparkle signing material, appcast/ZIP write
+access, Screen Recording verification, second-display access, Supabase live-test credentials, and
+macOS 13 fallback availability.
 The handoff script writes a dated `RELEASE_GATE_HANDOFF.md` packet with the exact proof files a
 release machine should capture for Developer ID, notarization, TCC, second-display, Supabase,
 macOS 13, appcast, final ZIP, and website deployment gates.
@@ -45,10 +46,12 @@ export SPARKLE_ED_KEY_FILE=/secure/path/parcel-sparkle.key
 export SPARKLE_KEYCHAIN_ACCOUNT=parcel.parable.dev
 
 export PARCEL_SCREEN_RECORDING_VERIFIED=1
+export PARCEL_COMPUTER_USE_VERIFIED=1
 export PARCEL_SECOND_DISPLAY_VERIFIED=1
 export PARCEL_SUPABASE_URL=https://example.supabase.co
 export PARCEL_SUPABASE_ANON_KEY=...
 export PARCEL_SUPABASE_BUCKET=captures
+export PARCEL_SUPABASE_LIVE_VERIFIED=1
 export PARCEL_MACOS13_VM_VERIFIED=1
 ```
 
@@ -73,6 +76,7 @@ With gates satisfied:
 UPDATE_APPCAST=1 \
 DEVELOPMENT_TEAM=QFH99B6X5V \
 NOTARYTOOL_PROFILE=parcel-release \
+RELEASE_EVIDENCE_DIR="$PWD/qa-evidence/final-ship-YYYY-MM-DD/release-gate-handoff-current" \
 Scripts/release.sh
 ```
 
@@ -82,7 +86,9 @@ Scripts/release.sh
 derives title/version/build/pubDate from the final ZIP app before writing length/signature, then
 validates a temporary updated appcast before replacing the source file. For a non-`SKIP_NOTARIZE`
 release, it runs `Scripts/verify-release-gates.sh` before archiving and `Scripts/verify-release.sh`
-against the website ZIP before exiting.
+against the website ZIP before exiting. When `RELEASE_EVIDENCE_DIR` is set, the release script also
+writes the preflight, notarization, stapling validation, Gatekeeper, appcast-update, and final
+public-ZIP verifier proof logs expected by `Scripts/verify-release-gate-evidence.sh`.
 
 If using the Keychain-stored Sparkle key, approve the `sign_update` Keychain prompt on the release
 machine. For non-interactive release jobs, provide `SPARKLE_ED_KEY_FILE` or
@@ -128,8 +134,10 @@ on tag-triggered public releases:
 | `SPARKLE_ED_PRIVATE_KEY` | Sparkle EdDSA private key for non-interactive appcast signing. |
 | `SPARKLE_KEYCHAIN_ACCOUNT` | Optional; defaults to `parcel.parable.dev`. |
 | `PARCEL_SCREEN_RECORDING_VERIFIED` | Set to `1` only after exact release/test app path QA passes. |
+| `PARCEL_COMPUTER_USE_VERIFIED` | Set to `1` only after menu bar, Overlay, Editor, Preferences, History, and Recording UI proof passes for the exact release/test app path. |
 | `PARCEL_SECOND_DISPLAY_VERIFIED` | Set to `1` only after second-display QA passes. |
 | `PARCEL_SUPABASE_URL`, `PARCEL_SUPABASE_ANON_KEY`, `PARCEL_SUPABASE_BUCKET` | Live Supabase upload QA gate. |
+| `PARCEL_SUPABASE_LIVE_VERIFIED` | Set to `1` only after live Supabase upload success, disabled state, and bad-credentials behavior are verified. |
 | `PARCEL_MACOS13_VM_VERIFIED` | Set to `1` only after macOS 13 fallback QA passes. |
 
 ## Current Gates

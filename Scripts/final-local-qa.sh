@@ -38,6 +38,7 @@ run release/script-syntax bash -n \
   Scripts/verify-workflows.sh \
   Scripts/verify-website-export-artifact.sh \
   Scripts/write-release-gate-handoff.sh \
+  Scripts/write-release-manual-proof-assertions.sh \
   Scripts/verify-release-gate-evidence.sh \
   Scripts/test-release-gate-evidence.sh \
   Scripts/ship-status.sh \

@@ -28,6 +28,19 @@ EXPORT_PATH="$ROOT/build/export"
 APP_PATH="$EXPORT_PATH/Parcel.app"
 ZIP_PATH="$ROOT/build/Parcel.zip"
 WEBSITE_ZIP="$ROOT/Website/public/downloads/Parcel.zip"
+RELEASE_EVIDENCE_DIR="${RELEASE_EVIDENCE_DIR:-}"
+
+run_with_optional_log() {
+  local rel_log="$1"
+  shift
+
+  if [[ -n "$RELEASE_EVIDENCE_DIR" ]]; then
+    mkdir -p "$(dirname "$RELEASE_EVIDENCE_DIR/$rel_log")"
+    "$@" 2>&1 | tee "$RELEASE_EVIDENCE_DIR/$rel_log"
+  else
+    "$@"
+  fi
+}
 
 if [[ -z "${RUN_RELEASE_PREFLIGHT+x}" ]]; then
   if [[ "${SKIP_NOTARIZE:-}" == "1" ]]; then
@@ -47,7 +60,8 @@ fi
 
 if [[ "$RUN_RELEASE_PREFLIGHT" == "1" ]]; then
   echo "==> Verifying release gates"
-  "$ROOT/Scripts/verify-release-gates.sh"
+  run_with_optional_log release/gate-preflight-final.log \
+    "$ROOT/Scripts/verify-release-gates.sh"
 else
   echo "==> Skipping release gate preflight (RUN_RELEASE_PREFLIGHT=0)"
 fi
@@ -108,12 +122,14 @@ ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 if [[ "${SKIP_NOTARIZE:-}" != "1" ]]; then
   if [[ -n "${NOTARYTOOL_PROFILE:-}" ]]; then
     echo "==> Submitting for notarization with keychain profile"
-    xcrun notarytool submit "$ZIP_PATH" \
+    run_with_optional_log release/notarization.log \
+      xcrun notarytool submit "$ZIP_PATH" \
       --keychain-profile "$NOTARYTOOL_PROFILE" \
       --wait
   elif [[ -n "${APPLE_ID:-}" && -n "${APPLE_APP_PASSWORD:-}" ]]; then
     echo "==> Submitting for notarization with Apple ID credentials"
-    xcrun notarytool submit "$ZIP_PATH" \
+    run_with_optional_log release/notarization.log \
+      xcrun notarytool submit "$ZIP_PATH" \
       --apple-id "$APPLE_ID" \
       --password "$APPLE_APP_PASSWORD" \
       --team-id "$DEVELOPMENT_TEAM" \
@@ -124,6 +140,10 @@ if [[ "${SKIP_NOTARIZE:-}" != "1" ]]; then
   fi
   echo "==> Stapling ticket"
   xcrun stapler staple "$APP_PATH"
+  run_with_optional_log release/stapler-validate.log \
+    xcrun stapler validate "$APP_PATH"
+  run_with_optional_log release/spctl-final.log \
+    spctl -a -vvv -t install "$APP_PATH"
   rm -f "$ZIP_PATH"
   ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 fi
@@ -133,12 +153,14 @@ cp "$ZIP_PATH" "$WEBSITE_ZIP"
 
 if [[ "${UPDATE_APPCAST:-}" == "1" ]]; then
   echo "==> Updating Sparkle appcast"
-  "$ROOT/Scripts/update-appcast.sh" "$WEBSITE_ZIP"
+  run_with_optional_log release/appcast-update-final.log \
+    "$ROOT/Scripts/update-appcast.sh" "$WEBSITE_ZIP"
 fi
 
 if [[ "$VERIFY_RELEASE" == "1" ]]; then
   echo "==> Verifying public website ZIP"
-  "$ROOT/Scripts/verify-release.sh" "$WEBSITE_ZIP"
+  run_with_optional_log release/verify-release-final.log \
+    "$ROOT/Scripts/verify-release.sh" "$WEBSITE_ZIP"
 else
   echo "==> Skipping final public ZIP verification (VERIFY_RELEASE=0)"
 fi

@@ -11,6 +11,8 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    env:
+      RELEASE_EVIDENCE_DIR: ${{ github.workspace }}/qa-evidence/github-release
     steps:
       - uses: actions/checkout@v4
 
@@ -52,7 +54,9 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN_PATH"
           security default-keychain -d user -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          mkdir -p "$RELEASE_EVIDENCE_DIR/release"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+            | tee "$RELEASE_EVIDENCE_DIR/release/developer-id-identity.txt"
 
       - name: Build, export, notarize
         env:
@@ -63,14 +67,17 @@ jobs:
           SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
           SPARKLE_KEYCHAIN_ACCOUNT: ${{ secrets.SPARKLE_KEYCHAIN_ACCOUNT }}
           PARCEL_SCREEN_RECORDING_VERIFIED: ${{ secrets.PARCEL_SCREEN_RECORDING_VERIFIED }}
+          PARCEL_COMPUTER_USE_VERIFIED: ${{ secrets.PARCEL_COMPUTER_USE_VERIFIED }}
           PARCEL_SECOND_DISPLAY_VERIFIED: ${{ secrets.PARCEL_SECOND_DISPLAY_VERIFIED }}
           PARCEL_SUPABASE_URL: ${{ secrets.PARCEL_SUPABASE_URL }}
           PARCEL_SUPABASE_ANON_KEY: ${{ secrets.PARCEL_SUPABASE_ANON_KEY }}
           PARCEL_SUPABASE_BUCKET: ${{ secrets.PARCEL_SUPABASE_BUCKET }}
+          PARCEL_SUPABASE_LIVE_VERIFIED: ${{ secrets.PARCEL_SUPABASE_LIVE_VERIFIED }}
           PARCEL_MACOS13_VM_VERIFIED: ${{ secrets.PARCEL_MACOS13_VM_VERIFIED }}
         run: |
+          set -euo pipefail
           chmod +x Scripts/*.sh
-          ./Scripts/release.sh
+          ./Scripts/release.sh | tee "$RELEASE_EVIDENCE_DIR/release/release-final.log"
 
       - uses: actions/setup-node@v4
         with:
@@ -81,18 +88,50 @@ jobs:
       - name: Build website
         working-directory: Website
         run: |
+          set -euo pipefail
+          mkdir -p "$RELEASE_EVIDENCE_DIR/website"
           npm ci
-          npm run lint
-          npm run build
+          npm run lint | tee "$RELEASE_EVIDENCE_DIR/website/lint-final.log"
+          npm run build | tee "$RELEASE_EVIDENCE_DIR/website/build-final.log"
 
       - name: Verify website export artifact
-        run: bash Scripts/verify-website-export-artifact.sh
+        run: |
+          set -euo pipefail
+          mkdir -p "$RELEASE_EVIDENCE_DIR/website"
+          bash Scripts/verify-website-export-artifact.sh \
+            | tee "$RELEASE_EVIDENCE_DIR/website/export-artifact-final.log"
+
+      - name: Write manual gate assertions
+        env:
+          PARCEL_SCREEN_RECORDING_VERIFIED: ${{ secrets.PARCEL_SCREEN_RECORDING_VERIFIED }}
+          PARCEL_COMPUTER_USE_VERIFIED: ${{ secrets.PARCEL_COMPUTER_USE_VERIFIED }}
+          PARCEL_SECOND_DISPLAY_VERIFIED: ${{ secrets.PARCEL_SECOND_DISPLAY_VERIFIED }}
+          PARCEL_SUPABASE_LIVE_VERIFIED: ${{ secrets.PARCEL_SUPABASE_LIVE_VERIFIED }}
+          PARCEL_MACOS13_VM_VERIFIED: ${{ secrets.PARCEL_MACOS13_VM_VERIFIED }}
+          PARCEL_RELEASE_TESTER: GitHub Actions release gate
+        run: |
+          set -euo pipefail
+          Scripts/write-release-manual-proof-assertions.sh \
+            | tee "$RELEASE_EVIDENCE_DIR/release/manual-proof-assertions.log"
+
+      - name: Verify release gate evidence
+        run: |
+          set -euo pipefail
+          Scripts/verify-release-gate-evidence.sh "$RELEASE_EVIDENCE_DIR" \
+            | tee "$RELEASE_EVIDENCE_DIR/release-gate-evidence-final.log"
 
       - name: Upload website artifact
         uses: actions/upload-artifact@v4
         with:
           name: website-dist
           path: Website/out
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence
+          path: qa-evidence/github-release
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

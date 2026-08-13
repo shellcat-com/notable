@@ -86,7 +86,11 @@ else
 fi
 
 if [[ -n "${NOTARYTOOL_PROFILE:-}" ]]; then
-  pass "NOTARYTOOL_PROFILE is set"
+  if xcrun notarytool history --keychain-profile "$NOTARYTOOL_PROFILE" >/dev/null 2>&1; then
+    pass "Notary keychain profile '$NOTARYTOOL_PROFILE' is available"
+  else
+    gate "Notary keychain profile '$NOTARYTOOL_PROFILE' is unavailable; run: xcrun notarytool store-credentials $NOTARYTOOL_PROFILE"
+  fi
 elif [[ -n "${APPLE_ID:-}" && -n "${APPLE_APP_PASSWORD:-}" && -n "${DEVELOPMENT_TEAM:-}" ]]; then
   pass "Apple ID notary credentials are present in the environment"
 else
@@ -127,12 +131,18 @@ else
   gate "Screen Recording must be granted and manually verified for the exact release/test app path"
 fi
 
+if [[ "${PARCEL_COMPUTER_USE_VERIFIED:-}" == "1" ]]; then
+  pass "Computer Use UI proof was manually verified for the exact release/test app path"
+else
+  gate "Computer Use UI proof must be manually verified for the exact release/test app path"
+fi
+
 if [[ "${PARCEL_SECOND_DISPLAY_VERIFIED:-}" == "1" ]]; then
   pass "Second-display QA was manually verified"
 else
   display_count="$(system_profiler SPDisplaysDataType 2>/dev/null | grep -c 'Resolution:' || true)"
   if [[ "${display_count:-0}" -ge 2 ]]; then
-    pass "Second display detected ($display_count displays)"
+    gate "Second display detected ($display_count displays), but PARCEL_SECOND_DISPLAY_VERIFIED=1 is required after manual QA"
   else
     gate "Second-display QA requires an external display or PARCEL_SECOND_DISPLAY_VERIFIED=1"
   fi
@@ -140,6 +150,11 @@ fi
 
 if [[ -n "${PARCEL_SUPABASE_URL:-}" && -n "${PARCEL_SUPABASE_ANON_KEY:-}" && -n "${PARCEL_SUPABASE_BUCKET:-}" ]]; then
   pass "Supabase live-test credentials are present in the environment"
+  if [[ "${PARCEL_SUPABASE_LIVE_VERIFIED:-}" == "1" ]]; then
+    pass "Live Supabase upload QA was manually verified"
+  else
+    gate "Live Supabase upload QA requires PARCEL_SUPABASE_LIVE_VERIFIED=1 after manual success/error testing"
+  fi
 else
   gate "Live Supabase upload QA needs PARCEL_SUPABASE_URL, PARCEL_SUPABASE_ANON_KEY, and PARCEL_SUPABASE_BUCKET"
 fi

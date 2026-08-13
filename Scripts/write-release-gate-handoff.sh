@@ -162,6 +162,7 @@ export SPARKLE_KEYCHAIN_ACCOUNT=parcel.parable.dev
 
 # Set these to 1 only after the corresponding manual proof is captured.
 export PARCEL_SCREEN_RECORDING_VERIFIED=1
+export PARCEL_COMPUTER_USE_VERIFIED=1
 export PARCEL_SECOND_DISPLAY_VERIFIED=1
 export PARCEL_MACOS13_VM_VERIFIED=1
 
@@ -169,18 +170,24 @@ export PARCEL_MACOS13_VM_VERIFIED=1
 export PARCEL_SUPABASE_URL=https://example.supabase.co
 export PARCEL_SUPABASE_ANON_KEY=...
 export PARCEL_SUPABASE_BUCKET=captures
+export PARCEL_SUPABASE_LIVE_VERIFIED=1
 
+security find-identity -v -p codesigning \\
+  | tee "$EVIDENCE_DIR/release/developer-id-identity.txt"
 Scripts/verify-release-gates.sh | tee "$EVIDENCE_DIR/release/gate-preflight-final.log"
 
 UPDATE_APPCAST=1 \\
 DEVELOPMENT_TEAM="\$DEVELOPMENT_TEAM" \\
 NOTARYTOOL_PROFILE="\$NOTARYTOOL_PROFILE" \\
+RELEASE_EVIDENCE_DIR="$EVIDENCE_DIR" \\
 Scripts/release.sh | tee "$EVIDENCE_DIR/release/release-final.log"
 
 Scripts/verify-release.sh Website/public/downloads/Parcel.zip \\
   | tee "$EVIDENCE_DIR/release/verify-release-final.log"
 npm --prefix Website run build | tee "$EVIDENCE_DIR/website/build-final.log"
 Scripts/verify-website-export-artifact.sh | tee "$EVIDENCE_DIR/website/export-artifact-final.log"
+EVIDENCE_DIR="$EVIDENCE_DIR" Scripts/write-release-manual-proof-assertions.sh \\
+  | tee "$EVIDENCE_DIR/release/manual-proof-assertions.log"
 
 Scripts/verify-release-gate-evidence.sh "$EVIDENCE_DIR" \\
   | tee "$EVIDENCE_DIR/release-gate-evidence-final.log"
